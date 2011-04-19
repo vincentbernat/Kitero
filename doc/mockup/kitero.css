@@ -1,0 +1,140 @@
+html {
+    background: url("html_bg.png") repeat-x scroll 0 0 #5F5F5F;
+}
+
+#kitero-header, #kitero-footer {
+    color: #EEE;
+    margin-left: auto;
+    margin-right: auto;
+    width: 956px;
+    padding: 0;
+}
+
+/******
+ * Header
+ **/
+
+#kitero-header {
+    background: url("header_bg.png") no-repeat top center;
+    padding-top: 2px;
+}
+
+#kitero-header dl {
+    background-color: black;
+    padding: 0.2em 1em 0.2em 1em;
+    margin: 0 2px 0 2px;
+}
+#kitero-header dt {
+    font-weight: bold;
+    clear: both;    
+}
+#kitero-header dt:after {
+    content: ": "
+}
+#kitero-header dt, #kitero-header dd {
+    display: inline;
+}
+#kitero-header dd {
+    margin-right: 6em;
+    margin-left: 1em;
+}
+
+/******
+ * Main
+ **/
+
+#kitero-main {
+    background-color: white;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1em;
+    width: 956px;
+    border-radius: 8px;
+    -moz-border-radius: 8px;
+}
+
+#kitero-main h1, #kitero-main h3 {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    text-shadow: #DDD 2px 2px 1px;
+    color: #333;
+}
+#kitero-main h1 {
+    font-size: 150%;
+}
+#kitero-main h3 {
+    font-size: 90%;
+    margin-left: 1em;
+}
+
+#kitero-main div.kitero-conns {
+    margin-left: 2em;
+}
+#kitero-main div.kitero-conn {
+    padding-left: 2em;
+}
+#kitero-main .kitero-graph {
+    float: right;
+    width: 300px;
+    height: 150px;
+    background-color: white;
+    font-size: 70%;
+}
+#kitero-main .kitero-conn-title {
+    font-weight: bold;
+}
+#kitero-main .kitero-conn-descr {
+    display: block;
+    margin-left: 1em;
+    font-style: italic;
+    font-size: 90%;
+    width: 50%;
+}
+
+#kitero-main .kitero-qos {
+    list-style-type: none;
+}
+#kitero-main .kitero-qos li {
+    padding: 2px 1em 2px 0;    
+}
+#kitero-main .kitero-qos-descr {
+    display: block;
+    margin-left: 1em;
+    font-style: italic;
+    font-size: 90%;
+}
+#kitero-main li.kitero-qos-selected {
+    background: url("green.png") repeat-x top #3A8104;
+    padding: 2px 1em 2px 1em;
+    border-radius: 3px;
+    border-color: #E8EA45;
+    -moz-border-radius: 3px;
+    color: white;
+}
+
+.kitero-actions {
+    margin-top: 2em;
+    float: right;
+}
+#kitero-progressbar {
+    margin: 2px;
+}
+.kitero-actions-end {
+    clear: both;
+}
+
+/******
+ * Footer
+ **/
+
+#kitero-footer {
+    text-align: right;
+    background: url("footer_bg.png") no-repeat bottom center;
+    padding-bottom: 2px;
+}
+
+#kitero-footer div {
+    background-color: black;
+    padding: 0.2em 1em 0.2em 1em;
+    margin: 0 2px 0 2px;
+    font-size: 85%;
+}

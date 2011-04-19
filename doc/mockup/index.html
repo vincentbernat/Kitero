@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Kitérő: choose your gateway and QoS</title>
+    <meta charset="utf-8" />
+    <link type="text/css" href="jquery-ui/css/smoothness/jquery-ui.css"
+	  rel="stylesheet" />
+    <script language="javascript" type="text/javascript"
+	    src="jquery/jquery.js"></script>
+    <script language="javascript" type="text/javascript"
+	    src="jquery-ui/jquery-ui.js"></script>
+    <script language="javascript" type="text/javascript"
+	    src="flot/jquery.flot.min.js"></script>
+    <link type="text/css" href="kitero.css" rel="stylesheet" />
+    <script language="javascript" type="text/javascript"
+	    src="kitero.js"></script>
+  </head>
+  <body>
+
+    <div id="kitero-header">
+      <dl class="kitero-settings">
+	<dt>Your IP</dt>
+	<dd>172.17.19.47</dd>
+	<dt>Current connection</dt>
+	<dd id="kitero-current-connection">LAN</dd>
+	<dt>QoS</dt>
+	<dd id="kitero-current-qos">10 Mbit</dd>
+      </dl>
+    </div>
+
+    <div id="kitero-main">
+      <h1>Available connections</h1>
+
+      <div class="kitero-conns">
+
+	<div class="kitero-conn">
+	  <span class="kitero-conn-title">No connection</span>
+	  <span class="kitero-conn-descr">
+	    Drop all traffic.
+	  </span>
+	</div>
+	<div class="kitero-conn-details">
+	  <h3>Available QoS</h3>
+	  <ul class="kitero-qos">
+	    <li>
+	      <span class="kitero-qos-name">No QoS</span>
+	      <span class="kitero-qos-descr">No QoS applied.</span>
+	    </li>
+	  </ul>
+	</div>
+
+	<div class="kitero-conn">
+	  <span class="kitero-conn-title">LAN</span>
+	  <span class="kitero-conn-descr">
+	    Ethernet LAN. Lot of bandwidth available. May simulate a
+	    variety of connections using QoS.
+	  </span>
+	</div>
+	<div class="kitero-conn-details">
+	  <span class="kitero-graph"></span>
+	  <h3>Available QoS</h3>
+	  <ul class="kitero-qos">
+	    <li>
+	      <span class="kitero-qos-name">Unlimited</span>
+	      <span class="kitero-qos-descr">No QoS applied.</span>
+	    </li>
+	    <li class="kitero-qos-selected">
+	      <span class="kitero-qos-name">10 MBit</span>
+	      <span class="kitero-qos-descr">Bandwidth capping to 10 MBit.</span>
+	    </li>
+	    <li>
+	      <span class="kitero-qos-name">ADSL 20 MBit</span>
+	      <span class="kitero-qos-descr">Simulate a 20 MBit
+	      ADSL connection by capping bandwidth to 20 MBit and add
+	      latency.</span>
+	    </li>
+	    <li>
+	      <span class="kitero-qos-name">GPRS</span>
+	      <span class="kitero-qos-descr">Simulate a mobile
+	      GPRS connection by capping bandwidth to 100 Kbit,
+	      adding latency and losing some packets.</span>
+	    </li>
+	  </ul>
+	</div>
+
+	<div class="kitero-conn">
+	  <span class="kitero-conn-title">Livebox B1</span>
+	  <span class="kitero-conn-descr">
+	    ADSL connection using a Livebox with 5Mbit contract.
+	  </span>
+	</div>
+	<div class="kitero-conn-details">
+	  <span class="kitero-graph"></span>
+	  <h3>Available QoS</h3>
+	  <ul class="kitero-qos">
+	    <li>
+	      <span class="kitero-qos-name">5 MBit</span>
+	      <span class="kitero-qos-descr">Cap traffic to 5 Mbit.</span>
+	    </li>
+	    <li>
+	      <span class="kitero-qos-name">1 MBit</span>
+	      <span class="kitero-qos-descr">Cap traffic to 1 Mbit.</span>
+	    </li>
+	  </ul>
+	</div>
+
+	<div class="kitero-conn">
+	  <span class="kitero-conn-title">3G</span>
+	  <span class="kitero-conn-descr">
+	    Mobile 3G connection using Business Everywhere contract.
+	  </span>
+	</div>
+	<div class="kitero-conn-details">
+	  <span class="kitero-graph"></span>
+	  <h3>Available QoS</h3>
+	  <ul class="kitero-qos">
+	    <li>
+	      <span class="kitero-qos-name">No QoS</span>
+	      <span class="kitero-qos-descr">No QoS applied.</span>
+	    </li>
+	  </ul>
+	</div>
+
+      </div>
+
+      <div class="kitero-actions">
+	<div id="kitero-progressbar"></div>
+	<form>
+	  <button id="cancel">Cancel</button>
+	  <button id="apply">Apply changes</button>
+	</form>
+      </div>
+      <div class="kitero-actions-end"></div>
+    </div>
+
+    <div id="kitero-footer">
+      <div>
+	kitérő running on fake host
+      </div>
+    </div>
+    
+  </body>
+</html>
