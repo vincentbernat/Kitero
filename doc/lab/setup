@@ -1,0 +1,183 @@
+#!/bin/sh
+
+# Simple lab to test kitero. This lab setups two VM: one router that
+# should run kitero and several web servers that will be used to grab a
+# some files to test the effect of the QoS. This uses UML.
+
+# A route to 192.0.2.1 will be added on the host to reach the web server
+# through the server running kitero. Therefore, if the lab is
+# successfully setup, you can connect to the web server using
+# http://192.0.2.1. You can access kitero web interface through
+# http://172.29.7.1:8183.
+
+# R1 has three connections available. Two of them are using NAT, the
+# last one is not. http://192.0.2.1 is available through each of those
+# connections. This is not the same web server and it will display
+# different files for each connection.
+
+# You should start kitero by hand on R1. Take a look at the
+# configuration of R1 to understand the setup:
+#   ip addr ls
+#   ip route show
+#   ip route add default via 192.168.2.1
+
+PROGNAME="$0"
+PROGARGS="$@"
+
+check_dependencies() {
+    for dep in screen sudo tunctl ip uml_switch linux bash nginx; do
+	which $dep 2> /dev/null > /dev/null || {
+	    echo "[!] Missing dependency: $dep"
+	    exit 1
+	}
+    done
+}
+
+setup_screen() {
+    [ x"$TERM" = x"screen" ] || \
+	exec screen -ln -S kitero-lab -c /dev/null -t main "$0" "$@"
+    sleep 1
+    screen -X caption always "%{= wk}%-w%{= BW}%n %t%{-}%+w %-="
+}
+
+setup_interfaces() {
+    echo "[+] Setup network interfaces"
+    sudo tunctl -b -u $(whoami) -t kitero > /dev/null
+    sudo ip link set up dev kitero
+    sudo ip addr add 172.29.7.14/24 dev kitero
+    sudo ip route add 192.0.2.1/32 via 172.29.7.1 dev kitero
+    echo "[+] Setup uml_switch"
+    uml_switch -unix switch.socket &
+    echo $! > uml_switch.pid
+    sleep 1
+}
+
+start_vm() {
+    echo "[+] Start kitero VM"
+    screen -t R1 \
+	linux uts=R1 \
+	root=/dev/root con=null ssl0=fd:0,fd:1 rootfstype=hostfs init=$PWD/setup \
+	eth0=tuntap,kitero,, \
+	eth1=daemon,,unix,$PWD/switch.socket \
+	eth2=daemon,,unix,$PWD/switch.socket \
+	eth3=daemon,,unix,$PWD/switch.socket
+    screen -X select 0
+    echo "[+] Start web servers VM"
+    for i in W1 W2 W3; do
+	screen -t $i \
+	    linux uts=$i \
+	    root=/dev/root con=null ssl0=fd:0,fd:1 rootfstype=hostfs init=$PWD/setup \
+	    eth0=daemon,,unix,$PWD/switch.socket
+	screen -X select 0
+    done
+}
+
+display_help() {
+    cat <<EOF
+
+Some screen commands :
+ C-a d     - Detach the screen (resume with screen -r kitero-lab)
+ C-a "     - Select a window
+ C-a space - Next window
+ C-a C-a   - Previous window
+EOF
+echo "Press enter to exit the lab"
+read a
+}
+
+cleanup() {
+    killall -q -u $(whoami) linux
+    kill $(cat uml_switch.pid)
+    rm uml_switch.pid switch.socket
+    tunctl -d kitero
+}
+
+case $$,$PPID in
+    1,*|*,1)
+	# Inside a VM
+	echo "[+] Set hostname"
+	hostname -b ${uts}
+	echo "[+] Set path"
+	export TERM=xterm
+	export PATH=/usr/local/bin:/usr/bin:/bin:/sbin:/usr/local/sbin:/usr/sbin
+
+        # A getty allow to setup a proper console
+	[ x"$GETTY" = x"1" ] || {
+	    export GETTY=1
+	    getty -n -l $0 38400 /dev/ttyS0
+	}
+
+	# FS
+	echo "[+] Set filesystems"
+	mount -t proc proc /proc
+	mount -t sysfs sysfs /sys
+	mount -t tmpfs tmpfs /dev -o rw && {
+	    cd /dev
+	    MAKEDEV null
+	}
+	mount -t tmpfs tmpfs /var/run -o rw,nosuid,nodev
+	mount -t tmpfs tmpfs /var/tmp -o rw,nosuid,nodev
+	mount -t tmpfs tmpfs /var/log -o rw,nosuid,nodev
+	mount -o bind /usr/lib/uml/modules /lib/modules
+	mount -t hostfs hostfs $(dirname $0) -o $(dirname $0)
+
+	# Interfaces
+	echo "[+] Set interfaces"
+	for intf in /sys/class/net/*; do
+	    intf=$(basename $intf)
+	    ip a l dev $intf 2> /dev/null >/dev/null && ip link set up dev $intf
+	done
+
+	echo "[+] Start syslog"
+	rsyslogd
+
+	cd $(dirname $0)
+
+
+	echo "[+] Setup VM"
+	case ${uts} in
+	    R1)
+		sysctl -w net.ipv4.ip_forward=1
+		ip addr add 172.29.7.1/24 dev eth0
+		ip addr add 192.168.1.10/24 dev eth1
+		ip addr add 192.168.2.10/24 dev eth2
+		ip addr add 192.168.3.10/24 dev eth3
+		# Nat to access to W1 and W2, no NAT for W3
+		iptables -t nat -A POSTROUTING \
+		    -s 172.29.7.0/24 -o eth1 -j SNAT --to-source 192.168.1.10
+		iptables -t nat -A POSTROUTING \
+		    -s 172.29.7.0/24 -o eth2 -j SNAT --to-source 192.168.2.10
+
+		echo "[+] Start kitero yourself if needed"
+		;;
+	    W1|W2|W3)
+		ip addr add 192.168.${uts#W}.1/24 dev eth0
+		ip addr add 192.0.2.1/32 dev eth0
+		ip route add default via 192.168.${uts#W}.10
+
+		echo "[+] Start nginx"
+		mkdir /var/log/nginx
+		mkdir /var/run/nginx
+		for size in 1 1024 1048576 10485760 104857600; do
+		    dd if=/dev/zero of=/var/run/nginx/${uts}-$size \
+			count=1 bs=1 seek=$size 2> /dev/null
+		done
+		nginx -c $PWD/nginx.conf
+		;;
+	esac
+
+	echo "[+] Drop to a shell"
+	exec /bin/bash
+
+	;;
+    *)
+	# Setup the lab
+	check_dependencies
+	setup_screen
+	setup_interfaces
+	start_vm
+	display_help
+	cleanup
+	screen -X quit
+	;;
+esac
