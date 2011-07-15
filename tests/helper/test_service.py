@@ -177,7 +177,7 @@ qos:
         """Check if the service is running and accept several clients"""
         clients = []
         threads = []
-        for c in range(1, 50):
+        for c in range(1, 20):
             clients.append(rpyc.connect('127.0.0.1', 18861))
         def work(c):
             c.ping()

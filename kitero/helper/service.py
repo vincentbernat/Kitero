@@ -8,6 +8,7 @@ import logging.handlers
 logger = logging.getLogger("kitero.helper.service")
 
 from kitero.helper.router import Router
+import kitero.config
 
 class RPCService(rpyc.Service):
     """Helper service as an RPC service.
@@ -94,13 +95,14 @@ class Service(object):
 
         # Create RPyC service
         from rpyc.utils.server import ThreadedServer
-        config = config.get('helper', {})
-        port = config.get('port', 18861)
-        listen = config.get('listen', '127.0.0.1')
+        config = kitero.config.merge(config)
+        config = config['helper']
         self.server = ThreadedServer(RPCService,
-                           port = port, hostname = listen,
-                           auto_register = False)
-        logger.info('create RPyC server on %s:%d', listen, port)
+                                     port = config['port'], hostname = config['listen'],
+                                     auto_register = False,
+                                     protocol_config = {'allow_public_attrs': True})
+        logger.info('create RPyC server on %s:%d',
+                    config['listen'], config['port'])
 
     def start(self):
         """Run the helper"""
@@ -166,6 +168,7 @@ class Service(object):
         logger.info("read configuration file %r" % args[0])
         try:
             config = yaml.safe_load(file(args[0]))
+            config = kitero.config.merge(config)
             # Create the router
             router = Router.load(config['router'])
             if binder is not None:
