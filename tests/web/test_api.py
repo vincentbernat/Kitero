@@ -13,6 +13,7 @@ import json
 from kitero.web.root import KiteroWebService
 from kitero.helper.router import Router
 from kitero.helper.service import Service
+from kitero.web.rpc import RPCClient, RPCException
 
 class TestApi10(unittest.TestCase):
     def setUp(self):
@@ -38,8 +39,6 @@ qos:
 """))
         # Start the service in a separate process
         self.service = Service({}, r)
-        self.sthread = threading.Thread(target=self.service.start)
-        self.sthread.start()
         # Start CherryPy
         self.wthread = threading.Thread(target=KiteroWebService.run,
                                         args=({'web': { 
@@ -56,7 +55,8 @@ qos:
         output = json.loads(output)
         self.assertEqual(content.getcode(), 200)
         self.assertEqual(headers['Content-Type'], 'application/json')
-        self.assertEqual(output, {'ip': '127.0.0.1'})
+        self.assertEqual(output, {'status': 0,
+                                  'value': {'ip': '127.0.0.1'}})
         # The same request with a slash
         content = urllib2.urlopen("http://127.0.0.1:8187/api/1.0/current")
         self.assertEqual(content.getcode(), 200)
@@ -75,7 +75,8 @@ qos:
         output = json.loads(output)
         self.assertEqual(content.getcode(), 200)
         self.assertEqual(headers['Content-Type'], 'application/json')
-        self.assertEqual(output, {
+        self.assertEqual(output['status'], 0)
+        self.assertEqual(output['value'], {
                 "eth1": {
                     'description': "My first interface",
                     'qos': {
@@ -106,7 +107,9 @@ qos:
         output = json.loads(output)
         self.assertEqual(content.getcode(), 200)
         self.assertEqual(headers['Content-Type'], 'application/json')
-        self.assertEqual(output, { 'ip': '127.0.0.1', 'interface': 'eth1', 'qos': 'qos1' })
+        self.assertEqual(output['status'], 0)
+        self.assertEqual(output['value'],
+                         { 'ip': '127.0.0.1', 'interface': 'eth1', 'qos': 'qos1' })
         self.assertEqual(content.geturl(), "http://127.0.0.1:8187/api/1.0/current")
         # Bind to another interface
         content = urllib2.urlopen("http://127.0.0.1:8187/api/1.0/interface/eth1/qos2", "")
@@ -115,7 +118,8 @@ qos:
         output = json.loads(output)
         self.assertEqual(content.getcode(), 200)
         self.assertEqual(headers['Content-Type'], 'application/json')
-        self.assertEqual(output, { 'ip': '127.0.0.1', 'interface': 'eth1', 'qos': 'qos2' })
+        self.assertEqual(output['value'],
+                         { 'ip': '127.0.0.1', 'interface': 'eth1', 'qos': 'qos2' })
         self.assertEqual(content.geturl(), "http://127.0.0.1:8187/api/1.0/current")
         # Bind to an incorrect interface
         with self.assertRaises(urllib2.HTTPError) as he:
@@ -127,10 +131,10 @@ qos:
         self.assertEqual(he.exception.code, 404)
 
     def tearDown(self):
-        self.service.server.close()
+        RPCClient.clean()
+        self.service.stop()
         cherrypy.server.stop()
         cherrypy.engine.exit()
-        self.sthread.join()
         self.wthread.join(1)    # Will never terminate because it
                                 # waits for main thread to
                                 # terminate. We won't terminate.

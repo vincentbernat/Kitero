@@ -10,8 +10,9 @@ import logging
 import re
 import threading
 import time
-import rpyc
 import yaml
+import socket
+import json
 
 from kitero.helper.service import Service
 from kitero.helper.router import Router, Interface, QoS
@@ -51,7 +52,9 @@ class FakeService(Service):
         l.debug("Debug message")
         l.info("Info message")
         l.warning("Warning message")
-        self.server = None
+
+    def wait(self):
+        pass
 
 class TestGoodOptions(unittest.TestCase):
     def setUp(self):
@@ -169,20 +172,34 @@ qos:
 """))
         # Start the service in a separate process
         self.service = Service({}, r)
-        self.thread = threading.Thread(target=self.service.start)
-        self.thread.start()
         time.sleep(0.2)         # Safety
 
     def test_service_multiple_clients(self):
         """Check if the service is running and accept several clients"""
         clients = []
         threads = []
-        for c in range(1, 20):
-            clients.append(rpyc.connect('127.0.0.1', 18861))
+        for c in range(1, 5):
+            # Open connection to RPC
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(('127.0.0.1', 18861))
+            clients.append(sock)
         def work(c):
-            c.ping()
-            c.root.bind("192.168.1.5", "eth1", "qos1")
-            self.assertEqual(c.root.get_client("192.168.1.5"), ("eth1", "qos1"))
+            read, write = c.makefile('rb'), c.makefile('wb', 0)
+            # ping
+            write.write("%s\n" % json.dumps(("ping",)))
+            answer = json.loads(read.readline())
+            self.assertEqual(answer["status"], 0)
+            # bind_client
+            write.write("%s\n" % json.dumps(
+                    ("bind_client", "192.168.1.5", "eth1", "qos1")))
+            answer = json.loads(read.readline())
+            self.assertEqual(answer["status"], 0)
+            # client
+            write.write("%s\n" % json.dumps(
+                    ("client", "192.168.1.5")))
+            answer = json.loads(read.readline())
+            self.assertEqual(answer["status"], 0)
+            self.assertEqual(answer["value"], ("eth1", "qos1"))
             c.close()
         for c in clients:
             threads.append(threading.Thread(target=work, args=c))
@@ -193,12 +210,15 @@ qos:
 
     def test_service_router(self):
         """Grab router information from the service"""
-        c = rpyc.connect('127.0.0.1', 18861)
-        c.ping()
-        interfaces = c.root.get_interfaces()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(('127.0.0.1', 18861))
+        read, write = sock.makefile('rb'), sock.makefile('wb', 0)
+        write.write("%s\n" % json.dumps(("interfaces",)))
+        answer = json.loads(read.readline())
+        self.assertEqual(answer["status"], 0)
         # We need to compare strings because we cannot compare local
         # and remote dictionary. Rely on sorting
-        self.assertEqual(str(interfaces), str({
+        self.assertEqual(answer["value"], {
                 "eth1": {
                     'description': "My first interface",
                     'qos': {
@@ -225,25 +245,34 @@ qos:
                             "delay": "500ms 30ms" }
                         }
                     }
-                }))
-        c.close()
+                })
+        sock.close()
 
     def test_bind_client(self):
         """Bind clients"""
-        c = rpyc.connect('127.0.0.1', 18861)
-        c.ping()
-        c.root.bind_client('192.168.1.1', 'eth2', 'qos3')
-        self.assertEqual(c.root.get_client('192.168.1.1'), ('eth2', 'qos3'))
-        c.root.bind_client('192.168.1.1', 'eth2', 'qos1')
-        self.assertEqual(c.root.get_client('192.168.1.1'), ('eth2', 'qos1'))
-        c.root.bind_client('192.168.1.2', 'eth2', 'qos1')
-        self.assertEqual(c.root.get_client('192.168.1.2'), ('eth2', 'qos1'))
-        c.root.bind_client('192.168.1.3', 'eth1', 'qos1')
-        self.assertEqual(c.root.get_client('192.168.1.3'), ('eth1', 'qos1'))
-        self.assertEqual(c.root.get_client('192.168.1.4'), None)
-        c.close()
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(('127.0.0.1', 18861))
+        read, write = sock.makefile('rb'), sock.makefile('wb', 0)
+
+        def bind(ip, eth, qos):
+            write.write("%s\n" % json.dumps(("bind_client", ip, eth, qos)))
+            answer = json.loads(read.readline())
+            self.assertEqual(answer["status"], 0)
+        def check(ip, value):
+            write.write("%s\n" % json.dumps(("client", ip)))
+            answer = json.loads(read.readline())
+            self.assertEqual(answer["status"], 0)
+            self.assertEqual(answer["value"], value)
+        bind("192.168.1.1", "eth2", "qos3")
+        check("192.168.1.1", ["eth2", "qos3"])
+        bind('192.168.1.1', 'eth2', 'qos1')
+        check('192.168.1.1', ['eth2', 'qos1'])
+        bind('192.168.1.2', 'eth2', 'qos1')
+        check('192.168.1.2', ['eth2', 'qos1'])
+        bind('192.168.1.3', 'eth1', 'qos1')
+        check('192.168.1.3', ['eth1', 'qos1'])
+        check('192.168.1.4', None)
+        sock.close()
 
     def tearDown(self):
-        self.service.server.close()
-        self.thread.join()
+        self.service.stop()

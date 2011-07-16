@@ -1,6 +1,5 @@
 import sys
 import yaml
-import rpyc
 import threading
 
 import logging
@@ -8,20 +7,21 @@ import logging.handlers
 logger = logging.getLogger("kitero.helper.service")
 
 from kitero.helper.router import Router
+from kitero.helper.rpc import RPCServer, RPCRequestHandler, expose
 import kitero.config
 
-class RPCService(rpyc.Service):
+class RouterRPCService(RPCRequestHandler):
     """Helper service as an RPC service.
 
     This is the actual class that will be instantiated for each
     connection and serve RPC queries.
     """
 
-    # Class variables
     router_lock = threading.Lock() # Lock to access the router
-    router = None                  # Reference to the router
+    router = None
 
-    def exposed_get_interfaces(self):
+    @expose
+    def interfaces(self):
         """Return the dictionary of known interfaces.
 
         :return: dictionary of interfaces
@@ -40,7 +40,8 @@ class RPCService(rpyc.Service):
             interfaces[i]['qos'] = qos
         return interfaces
 
-    def exposed_get_client(self, client):
+    @expose
+    def client(self, client):
         """Return client current binding.
 
         :param client: IP address of the client
@@ -55,7 +56,8 @@ class RPCService(rpyc.Service):
             interface, qos = self.router.clients[client]
             return (interface.name, qos.name)
 
-    def exposed_bind_client(self, client, interface, qos):
+    @expose
+    def bind_client(self, client, interface, qos):
         """Bind a client to an interface and QoS settings.
 
         :param client: IP address of the client
@@ -88,26 +90,25 @@ class Service(object):
         :param config: configuration of the application
         :param router: router that should be serviced
         """
-        # Let RPCService knows the managed router
-        # TODO: This should be done through a factory but
-        # TODO: RPyC introspects the class and is not happy.
-        RPCService.router = router
-
-        # Create RPyC service
-        from rpyc.utils.server import ThreadedServer
+        # Create RPC service
         config = kitero.config.merge(config)
         config = config['helper']
-        self.server = ThreadedServer(RPCService,
-                                     port = config['port'], hostname = config['listen'],
-                                     auto_register = False,
-                                     protocol_config = {'allow_public_attrs': True})
-        logger.info('create RPyC server on %s:%d',
+        RouterRPCService.router = router
+        self.server = RPCServer.run(config['listen'],
+                                    config['port'],
+                                    handler=RouterRPCService)
+        logger.info('create RPC server on %s:%d',
                     config['listen'], config['port'])
 
-    def start(self):
-        """Run the helper"""
-        if self.server is not None:
-            self.server.start()
+    def stop(self):
+        """Stop the helper service."""
+        self.server.stop()
+        self.server = None
+
+    def wait(self):
+        """Wait for the service to stop."""
+        while self.server is not None and self.server.wait(1): # pragma: no cover
+            pass
 
     @classmethod
     def run(cls, args=sys.argv[1:], binder=None):
@@ -175,7 +176,7 @@ class Service(object):
                 router.notify(binder)
             # Start service
             s = cls(config, router)
-            s.start()
+            s.wait()
         except Exception as e:
             logger.exception("unhandled error received")
             sys.exit(1)
