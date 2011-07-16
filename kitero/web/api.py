@@ -4,11 +4,8 @@ from kitero.web import app
 from kitero.web.decorators import jsonify
 from kitero.web.rpc import RPCClient
 
-@app.route("/api/1.0/current", methods=['GET'])
-@jsonify
-def current():
-    """Return the current settings for the client."""
-    client = flask.request.remote_addr
+def status(client):
+    """Return the status of the given client"""
     current = RPCClient.call("client", client)
     if current is None: # Not bound
         return { 'ip': client }
@@ -18,7 +15,14 @@ def current():
         'qos': current[1]
         }
 
-@app.route("/api/1.0/interface", methods=['GET'])
+@app.route("/api/1.0/current", methods=['GET'])
+@jsonify
+def current():
+    """Return the current settings for the client."""
+    client = flask.request.remote_addr
+    return status(client)
+
+@app.route("/api/1.0/interfaces", methods=['GET'])
 @jsonify
 def get_interfaces():
     """Return the list of available interfaces."""
@@ -35,4 +39,4 @@ def set_interface(interface, qos):
     """
     client = flask.request.remote_addr
     RPCClient.call("bind_client", client, interface, qos)
-    return "Client bound to interface %s, QoS %s" % (interface, qos)
+    return status(client)

@@ -60,7 +60,7 @@ qos:
 
     def test_interfaces(self):
         """Get the list of interfaces."""
-        rv = self.app.get("/api/1.0/interface")
+        rv = self.app.get("/api/1.0/interfaces")
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(rv.mimetype, 'application/json')
         result = json.loads(rv.data)
@@ -92,6 +92,9 @@ qos:
         self.assertEqual(rv.mimetype, 'application/json')
         result = json.loads(rv.data)
         self.assertEqual(result['status'], 0)
+        self.assertEqual(result['value'], { 'ip': '192.168.1.15',
+                                            'interface': 'eth1',
+                                            'qos': 'qos1' })
         # Second client
         rv = self.app.put("/api/1.0/interface/eth1/qos2",
                           environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
@@ -99,6 +102,9 @@ qos:
         self.assertEqual(rv.mimetype, 'application/json')
         result = json.loads(rv.data)
         self.assertEqual(result['status'], 0)
+        self.assertEqual(result['value'], { 'ip': '192.168.1.16',
+                                            'interface': 'eth1',
+                                            'qos': 'qos2' })
         # Check first
         rv = self.app.get("/api/1.0/current",
                           environ_overrides={"REMOTE_ADDR": "192.168.1.15"})

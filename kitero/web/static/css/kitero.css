@@ -1,0 +1,172 @@
+html {
+    background: url("../images/html_bg.png") repeat-x scroll 0 0 #5F5F5F;
+    -webkit-background-size: auto;
+    -moz-background-size: auto;
+    -o-background-size: auto;
+    background-size: auto;
+    font-family: sans-serif;
+}
+
+/* Loading stuff */
+html.loading {
+    background: url("../images/waiting.jpg") no-repeat center center fixed;
+    -webkit-background-size: 97%;
+    -moz-background-size: 97%;
+    -o-background-size: 97%;
+    background-size: 97%;
+}
+.no-js #kitero-loading {
+    font-size: 1.5em;
+}
+.loading #kitero-loading {
+    display: block;
+}
+#kitero-loading {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 1em;
+    background-color: rgba(200,200,200,0.6);
+    opacity: 0.8;
+    width: 100%;
+    font: bold 4em Ubuntu,'Droid Sans','Verdana','Helvetica Neue',sans-serif;
+    text-align: center;
+    text-shadow: 1px 1px 0 #CCC;
+    padding: 0.2em 0;
+}
+.loading #kitero-interface {
+    display: none;
+}
+/* End of loading */
+
+#kitero-header, #kitero-footer {
+    color: #EEE;
+    margin-left: auto;
+    margin-right: auto;
+    width: 956px;
+    padding: 0;
+}
+
+/******
+ * Header
+ **/
+
+#kitero-header {
+    background: url("../images/header_bg.png") no-repeat top center;
+    padding-top: 2px;
+}
+
+#kitero-header dl {
+    background-color: black;
+    padding: 0.2em 1em 0.2em 1em;
+    margin: 0 2px 0 2px;
+}
+#kitero-header dt {
+    font-weight: bold;
+    clear: both;    
+}
+#kitero-header dt:after {
+    content: ": "
+}
+#kitero-header dt, #kitero-header dd {
+    display: inline;
+}
+#kitero-header dd {
+    margin-right: 6em;
+    margin-left: 1em;
+}
+
+/******
+ * Main
+ **/
+
+#kitero-main {
+    background-color: white;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1em;
+    width: 956px;
+    -moz-border-radius: 8px;
+    border-radius: 8px;
+}
+
+#kitero-main h1, #kitero-main h3 {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    text-shadow: #DDD 2px 2px 1px;
+    color: #333;
+}
+#kitero-main h1 {
+    font-size: 150%;
+}
+#kitero-main h3 {
+    font-size: 90%;
+    margin-left: 1em;
+}
+
+#kitero-main div.kitero-conn {
+    padding-left: 2em;
+}
+#kitero-main .kitero-conn-title {
+    font-weight: bold;
+}
+#kitero-main .kitero-conn-descr {
+    display: block;
+    margin-left: 1em;
+    font-style: italic;
+    font-size: 90%;
+    width: 50%;
+}
+
+#kitero-main .kitero-qos {
+    list-style-type: none;
+}
+#kitero-main .kitero-qos li {
+    padding: 2px 1em 2px 0;
+    cursor: pointer;
+}
+#kitero-main .kitero-qos-descr {
+    display: block;
+    margin-left: 1em;
+    font-style: italic;
+    font-size: 90%;
+}
+#kitero-main .kitero-qos .kitero-qos-selected,  #kitero-main .kitero-qos li:hover {
+    background: url("../images/green.png") repeat-x top #3A8104;
+    padding: 2px 1em;
+    border-radius: 3px;
+    border-color: #E8EA45;
+    -moz-border-radius: 3px;
+    color: white;
+}
+#kitero-main .kitero-qos li:hover {
+    background: url("../images/green.png") repeat-x top #3A8104;
+    opacity: 0.8;
+}
+
+.kitero-actions {
+    margin-top: 2em;
+    float: right;
+}
+#kitero-progressbar {
+    margin: 2px;
+}
+.kitero-actions-end {
+    clear: both;
+}
+
+/******
+ * Footer
+ **/
+
+#kitero-footer {
+    text-align: right;
+    background: url("../images/footer_bg.png") no-repeat bottom center;
+    padding-bottom: 2px;
+}
+
+#kitero-footer div {
+    background-color: black;
+    padding: 0.2em 1em 0.2em 1em;
+    margin: 0 2px 0 2px;
+    font-size: 85%;
+}
