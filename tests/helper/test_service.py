@@ -147,25 +147,30 @@ class TestRPCService(unittest.TestCase):
 clients: eth0
 interfaces:
   eth1:
+    name: LAN
     description: "My first interface"
     qos:
       - qos1
       - qos2
   eth2:
+    name: WAN
     description: "My second interface"
     qos:
       - qos1
       - qos3
 qos:
   qos1:
+    name: 100M
     description: "My first QoS"
     bandwidth: 100mbps
     delay: 100ms 10ms distribution experimental
   qos2:
+    name: 10M
     description: "My second QoS"
     bandwidth: 10mbps
     delay: 200ms 10ms
   qos3:
+    name: 1M
     description: "My third QoS"
     bandwidth: 1mbps
     delay: 500ms 30ms
@@ -220,26 +225,32 @@ qos:
         # and remote dictionary. Rely on sorting
         self.assertEqual(answer["value"], {
                 "eth1": {
+                    'name': 'LAN',
                     'description': "My first interface",
                     'qos': {
                         'qos1': {
+                            'name': '100M',
                             'description': "My first QoS",
                             "bandwidth": "100mbps",
                             "delay": "100ms 10ms distribution experimental" },
                         'qos2': {
+                            'name': '10M',
                             'description': "My second QoS",
                             "bandwidth": "10mbps",
                             "delay": "200ms 10ms" }
                         }
                     },
                 "eth2": {
+                    'name': 'WAN',
                     'description': "My second interface",
                     'qos': {
                         'qos1': {
+                            'name': '100M',
                             'description': "My first QoS",
                             "bandwidth": "100mbps",
                             "delay": "100ms 10ms distribution experimental" },
                         'qos3': {
+                            'name': '1M',
                             'description': "My third QoS",
                             "bandwidth": "1mbps",
                             "delay": "500ms 30ms" }

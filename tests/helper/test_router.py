@@ -25,6 +25,7 @@ class TestQoSBasic(unittest.TestCase):
         self.assertEqual(q.name, "qos2")
         self.assertEqual(q.description, "My second QoS")
         self.assertEqual(q.settings, {"bandwidth": "150mbps"})
+        str(q)
 
     def test_qos_equality(self):
         """QoS settings equality"""
@@ -53,16 +54,17 @@ class TestInterfaceBasic(unittest.TestCase):
         i = Interface("eth0", "My first interface")
         self.assertEqual(i.name, "eth0")
         self.assertEqual(i.description, "My first interface")
-        self.assertEqual(i.qos, [])
+        self.assertEqual(i.qos, {})
 
     def test_build_interface(self):
         """Build a regular interface"""
-        q1 = QoS("qos1", "My first QoS")
-        q2 = QoS("qos2", "My second QoS")
-        i = Interface("eth1", "My second interface", [q1, q2])
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i = Interface("eth1", "My second interface", {'qos1': q1, 'qos2': q2})
         self.assertEqual(i.name, "eth1")
         self.assertEqual(i.description, "My second interface")
-        self.assertEqual(i.qos, [q1, q2])
+        self.assertEqual(i.qos, {'qos1': q1, 'qos2': q2})
+        str(i)
 
     def test_interface_equality(self):
         """Interface equality"""
@@ -73,21 +75,23 @@ class TestInterfaceBasic(unittest.TestCase):
         self.assertNotEqual(Interface("eth0", "My first interface"),
                             Interface("eth1", "My first interface"))
         self.assertEqual(Interface("eth0", "My first interface",
-                                   [QoS("qos1", ""), QoS("qos2", "")]),
+                                   {'qos1': QoS("100M", ""), 'qos2': QoS("10M", "")}),
                          Interface("eth0", "My first interface",
-                                   [QoS("qos1", ""), QoS("qos2", "")]))
+                                   {'qos1': QoS("100M", ""), 'qos2': QoS("10M", "")}))
         self.assertNotEqual(Interface("eth0", "My first interface",
-                                      [QoS("qos1", ""), QoS("qos2", "")]),
+                                      {'qos1': QoS("100M", ""), 'qos2': QoS("10M", "")}),
                             Interface("eth0", "My first interface",
-                                      [QoS("qos1", ""), QoS("qos2", "Different")]))
+                                      {'qos1': QoS("100M", ""),
+                                       'qos2': QoS("10M", "Different")}))
         self.assertNotEqual(Interface("eth0", "My first interface",
-                                      [QoS("qos1", ""), QoS("qos2", "")]),
+                                      {'qos1': QoS("100M", ""),
+                                       'qos2':QoS("10M", "")}),
                             "eth0")
 
     def test_pickle(self):
         """Pickling"""
         i = Interface("eth0", "My first interface",
-                      [QoS("qos1", ""), QoS("qos2", "")])
+                      {'qos1': QoS("100M", ""), 'qos2': QoS("10M", "")})
         self.assertEqual(i, pickle.loads(pickle.dumps(i)))
         
 class TestRouterBasic(unittest.TestCase):
@@ -100,46 +104,43 @@ class TestRouterBasic(unittest.TestCase):
 
     def test_router(self):
         """Create a complete router"""
-        q1 = QoS("qos1", "My first QoS")
-        q2 = QoS("qos2", "My second QoS")
-        i1 = Interface("eth1", "My second interface", [q1, q2])
-        i2 = Interface("eth2", "My third interface", [q1])
-        r = Router("eth0", interfaces=[i1, i2])
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2})
+        i2 = Interface("WAN", "My third interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth1': i1, 'eth2': i2})
         self.assertEqual(r.incoming, "eth0")
         self.assertEqual(r.clients, {})
         self.assertEqual(r.interfaces, {'eth1': i1, 'eth2': i2})
 
     def test_router_with_shared_interface(self):
         """Try to create router with duplicate interfaces"""
-        i1 = Interface("eth1", "My second interface")
-        i2 = Interface("eth0", "My third interface")
-        i3 = Interface("eth1", "My third interface")
+        i1 = Interface("LAN", "My second interface")
+        i2 = Interface("WAN", "My third interface")
         with self.assertRaises(ValueError):
-            r = Router("eth0", interfaces=[i1, i2])
-        with self.assertRaises(ValueError):
-            r = Router("eth0", interfaces=[i1, i3])
+            r = Router("eth0", interfaces={'eth0': i1, 'eth1': i2})
 
     def test_bind_client(self):
         """Client binding"""
-        q1 = QoS("qos1", "My first QoS")
-        q2 = QoS("qos2", "My second QoS")
-        i1 = Interface("eth1", "My second interface", [q1, q2])
-        i2 = Interface("eth2", "My third interface", [q1])
-        r = Router("eth0", interfaces=[i1, i2])
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2})
+        i2 = Interface("WAN", "My third interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth1': i1, 'eth2': i2})
         r.bind("192.168.15.2", "eth1", "qos2")
         r.bind("192.168.15.3", "eth2", "qos1")
         r.bind("192.168.15.4", "eth1", "qos2")
-        self.assertEqual(r.clients["192.168.15.2"], (i1, q2))
-        self.assertEqual(r.clients["192.168.15.3"], (i2, q1))
-        self.assertEqual(r.clients["192.168.15.4"], (i1, q2))
+        self.assertEqual(r.clients["192.168.15.2"], ('eth1', 'qos2'))
+        self.assertEqual(r.clients["192.168.15.3"], ('eth2', 'qos1'))
+        self.assertEqual(r.clients["192.168.15.4"], ('eth1', 'qos2'))
 
     def test_bind_inexistant(self):
         """Client binding to inexistant interface or QoS"""
-        q1 = QoS("qos1", "My first QoS")
-        q2 = QoS("qos2", "My second QoS")
-        i1 = Interface("eth1", "My second interface", [q1, q2])
-        i2 = Interface("eth2", "My third interface", [q1])
-        r = Router("eth0", interfaces=[i1, i2])
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2})
+        i2 = Interface("WAN", "My third interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth1': i1, 'eth2': i2})
         with self.assertRaises(KeyError):
             r.bind("192.168.15.2", "eth3", "qos2")
         with self.assertRaises(KeyError):
@@ -147,21 +148,21 @@ class TestRouterBasic(unittest.TestCase):
 
     def test_double_bind_client(self):
         """Try to bind a client twice"""
-        q1 = QoS("qos1", "My first QoS")
-        i1 = Interface("eth2", "My third interface", [q1])
-        r = Router("eth0", interfaces=[i1])
+        q1 = QoS("100M", "My first QoS")
+        i1 = Interface("LAN", "My third interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth2': i1})
         r.bind("192.168.15.2", "eth2", "qos1")
         r.bind("192.168.15.3", "eth2", "qos1")
         with self.assertRaises(ValueError):
             r.bind("192.168.15.3", "eth2", "qos1")
-        self.assertEqual(r.clients["192.168.15.2"], (i1, q1))
-        self.assertEqual(r.clients["192.168.15.3"], (i1, q1))
+        self.assertEqual(r.clients["192.168.15.2"], ('eth2', 'qos1'))
+        self.assertEqual(r.clients["192.168.15.3"], ('eth2', 'qos1'))
 
     def test_unbind_client(self):
         """Unbind a client"""""
-        q1 = QoS("qos1", "My first QoS")
-        i1 = Interface("eth2", "My third interface", [q1])
-        r = Router("eth0", interfaces=[i1])
+        q1 = QoS("100M", "My first QoS")
+        i1 = Interface("WAN", "My third interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth2': i1})
         r.bind("192.168.15.2", "eth2", "qos1")
         r.bind("192.168.15.3", "eth2", "qos1")
         r.unbind("192.168.15.2")
@@ -173,43 +174,47 @@ class TestRouterBasic(unittest.TestCase):
 
     def test_equality(self):
         """Test equality of two routers"""
-        q1 = QoS("qos1", "My first QoS")
-        q2 = QoS("qos2", "My second QoS")
-        i1 = Interface("eth1", "My second interface", [q1, q2])
-        i2 = Interface("eth2", "My third interface", [q1])
-        r = Router("eth0", interfaces=[i1, i2])
-        self.assertEqual(r, Router("eth0", interfaces=[
-                    Interface("eth1", "My second interface",
-                              [QoS("qos1", "My first QoS"), q2]),
-                    Interface("eth2", "My third interface", [q1])
-                    ]))
-        self.assertNotEqual(r, Router("eth0", interfaces=[
-                    Interface("eth1", "My second interface",
-                              [QoS("qos1", "My first QoS"), q2]),
-                    Interface("eth3", "My third interface", [q1])
-                    ]))
-        self.assertNotEqual(r, Router("eth0", interfaces=[
-                    Interface("eth1", "My second interface",
-                              [QoS("qos3", "My first QoS"), q2]),
-                    Interface("eth2", "My third interface", [q1])
-                    ]))
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2})
+        i2 = Interface("WAN", "My third interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth1': i1, 'eth2': i2})
+        self.assertEqual(r, Router("eth0", interfaces={
+                    'eth1': Interface("LAN", "My second interface",
+                                      {'qos1': QoS("100M", "My first QoS"),
+                                       'qos2': q2}),
+                    'eth2': Interface("WAN", "My third interface", {'qos1': q1})
+                    }))
+        self.assertNotEqual(r, Router("eth0",
+                                      interfaces={
+                    'eth1': Interface("LAN", "My second interface",
+                                      {'qos1': QoS("100M", "My first QoS"),
+                                       'qos2': q2}),
+                    'eth3': Interface("WAN", "My third interface", {'qos1': q1})
+                    }))
+        self.assertNotEqual(r, Router("eth0", interfaces={
+                    'eth1': Interface("LAN", "My second interface",
+                                      {'qos3': QoS("3G", "My first QoS"), 'qos2': q2}),
+                    'eth2': Interface("WAN", "My third interface", {'qos1': q1})
+                    }))
         self.assertNotEqual(r, Router("eth0"))
         self.assertNotEqual(r, "eth0")
         # With equality, clients are not considered
         r.bind("192.168.15.3", "eth2", "qos1")
-        self.assertEqual(r, Router("eth0", interfaces=[
-                    Interface("eth1", "My second interface",
-                              [QoS("qos1", "My first QoS"), q2]),
-                    Interface("eth2", "My third interface", [q1])
-                    ]))
+        self.assertEqual(r, Router("eth0", interfaces={
+                    'eth1': Interface("LAN", "My second interface",
+                                      {'qos1': QoS("100M", "My first QoS"),
+                                       'qos2': q2}),
+                    'eth2': Interface("WAN", "My third interface", {'qos1': q1})
+                    }))
 
     def test_pickle(self):
         """Pickling"""
-        q1 = QoS("qos1", "My first QoS")
-        q2 = QoS("qos2", "My second QoS")
-        i1 = Interface("eth1", "My second interface", [q1, q2])
-        i2 = Interface("eth2", "My third interface", [q1])
-        r = Router("eth0", interfaces=[i1, i2])
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2})
+        i2 = Interface("WAN", "My third interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth1': i1, 'eth2': i2})
         self.assertEqual(r, pickle.loads(pickle.dumps(r)))
         self.assertEqual(r.clients, pickle.loads(pickle.dumps(r)).clients)
         r.bind("192.168.15.2", "eth2", "qos1")
@@ -223,25 +228,30 @@ class TestRouterLoad(unittest.TestCase):
 clients: eth0
 interfaces:
   eth1:
+    name: LAN
     description: "My first interface"
     qos:
       - qos1
       - qos2
   eth2:
+    name: WAN
     description: "My second interface"
     qos:
       - qos1
       - qos3
 qos:
   qos1:
+    name: "100M"
     description: "My first QoS"
     bandwidth: 100mbps
     delay: 100ms 10ms distribution experimental
   qos2:
+    name: "10M"
     description: "My second QoS"
     bandwidth: 10mbps
     delay: 200ms 10ms
   qos3:
+    name: "1M"
     description: "My third QoS"
     bandwidth: 1mbps
     delay: 500ms 30ms
@@ -250,21 +260,21 @@ qos:
         self.assertEqual(r.incoming, "eth0")
         self.assertEqual(r.clients, {})
         self.assertEqual(r.interfaces["eth1"],
-                         Interface("eth1", "My first interface",
-                                    qos=[QoS("qos1", "My first QoS",
+                         Interface("LAN", "My first interface",
+                                    qos={'qos1': QoS("100M", "My first QoS",
                                              {"bandwidth": "100mbps",
                                               "delay": "100ms 10ms distribution experimental"}),
-                                         QoS("qos2", "My second QoS",
+                                         'qos2': QoS("10M", "My second QoS",
                                              {"bandwidth": "10mbps",
-                                              "delay": "200ms 10ms"})]))
+                                              "delay": "200ms 10ms"})}))
         self.assertEqual(r.interfaces["eth2"],
-                         Interface("eth2", "My second interface",
-                                   qos=[QoS("qos1", "My first QoS",
+                         Interface("WAN", "My second interface",
+                                   qos={'qos1': QoS("100M", "My first QoS",
                                             {"bandwidth": "100mbps",
                                              "delay": "100ms 10ms distribution experimental"}),
-                                        QoS("qos3", "My third QoS",
+                                        'qos3': QoS("1M", "My third QoS",
                                             {"bandwidth": "1mbps",
-                                             "delay": "500ms 30ms"})]))
+                                             "delay": "500ms 30ms"})}))
         self.assertEqual(len(r.interfaces), 2)
 
     def test_load_unknown_qos(self):
@@ -273,6 +283,7 @@ qos:
 clients: eth0
 interfaces:
   eth1:
+    name: LAN
     description: "My first interface"
     qos:
       - qos3
@@ -306,20 +317,21 @@ clients: eth0
 clients: eth0
 interfaces:
   eth1:
+    name: LAN
     description: "My first interface"
 """
         r = Router.load(yaml.load(doc))
-        self.assertEqual(r.interfaces, {'eth1': Interface("eth1", "My first interface")})
+        self.assertEqual(r.interfaces, {'eth1': Interface("LAN", "My first interface")})
         self.assertEqual(r.incoming, "eth0")
         self.assertEqual(r.clients, {})
 
 class TestRouterObserver(unittest.TestCase):
     def setUp(self):
-        q1 = QoS("qos1", "My first QoS")
-        q2 = QoS("qos2", "My second QoS")
-        i1 = Interface("eth1", "My second interface", [q1, q2])
-        i2 = Interface("eth2", "My third interface", [q1])
-        self.router = Router("eth0", interfaces=[i1, i2])
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2})
+        i2 = Interface("WAN", "My third interface", {'qos1': q1})
+        self.router = Router("eth0", interfaces={'eth1': i1, 'eth2': i2})
 
     def test_register_observer(self):
         """Register an observer and receive events"""
@@ -334,14 +346,14 @@ class TestRouterObserver(unittest.TestCase):
         self.assertEqual(last['event'], 'bind')
         self.assertEqual(last['source'], self.router)
         self.assertEqual(last['args']['client'], '192.168.15.2')
-        self.assertEqual(last['args']['interface'].name, 'eth2')
-        self.assertEqual(last['args']['qos'].name, 'qos1')
+        self.assertEqual(last['args']['interface'], 'eth2')
+        self.assertEqual(last['args']['qos'], 'qos1')
         self.router.bind("192.168.15.3", "eth2", "qos1")
         self.assertEqual(last['event'], 'bind')
         self.assertEqual(last['source'], self.router)
         self.assertEqual(last['args']['client'], '192.168.15.3')
-        self.assertEqual(last['args']['interface'].name, 'eth2')
-        self.assertEqual(last['args']['qos'].name, 'qos1')
+        self.assertEqual(last['args']['interface'], 'eth2')
+        self.assertEqual(last['args']['qos'], 'qos1')
         self.router.unbind("192.168.15.3")
         self.assertEqual(last['event'], 'unbind')
         self.assertEqual(last['source'], self.router)

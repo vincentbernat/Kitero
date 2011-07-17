@@ -19,18 +19,22 @@ class TestApi(unittest.TestCase):
 clients: eth0
 interfaces:
   eth1:
+    name: LAN
     description: "My first interface"
     qos:
       - qos1
       - qos2
   eth2:
+    name: WAN
     description: "My second interface"
 qos:
   qos1:
+    name: 100M
     description: "My first QoS"
     bandwidth: 100mbps
     delay: 100ms 10ms distribution experimental
   qos2:
+    name: 10M
     description: "My second QoS"
     bandwidth: 10mbps
     delay: 200ms 10ms
@@ -63,16 +67,20 @@ qos:
         self.assertEqual(result['status'], 0)
         self.assertEqual(result['value'],
                          {'eth2': {'qos': {},
+                                   'name': 'WAN',
                                    'description': 'My second interface'},
                           'eth1': {'qos': 
                                    {'qos1':
                                         {'delay': '100ms 10ms distribution experimental',
                                          'bandwidth': '100mbps',
+                                         'name': '100M',
                                          'description': 'My first QoS'},
                                     'qos2':
                                         {'delay': '200ms 10ms',
                                          'bandwidth': '10mbps',
+                                         'name': '10M',
                                          'description': 'My second QoS'}},
+                                   'name': 'LAN',
                                    'description': 'My first interface'}})
 
     def test_bind(self):

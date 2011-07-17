@@ -6,9 +6,8 @@ logger = logging.getLogger("kitero.helper.router")
 class Router(object):
     """A router manages interfaces, QoS settings and clients.
 
-    A router can be created by providing a list of clients and a list
-    of interfaces (each interface contains a list of available QoS
-    settings).
+    A router can be created by providing a set of interfaces (each
+    interface contains a list of available QoS settings).
 
     Once created, it is not possible to add interfaces to a router.
 
@@ -30,22 +29,23 @@ class Router(object):
         for q in yaml.get('qos', {}):
             settings = yaml['qos'][q].copy()
             del settings['description']
-            available_qos[q] = QoS(q,
+            del settings['name']
+            available_qos[q] = QoS(yaml['qos'][q]['name'],
                                    yaml['qos'][q]['description'],
                                    settings)
-        interfaces = []
+        interfaces = {}
         for i in yaml.get('interfaces', {}):
-            q = []
-            for qos in yaml['interfaces'][i].get('qos', []):
+            q = {}
+            for qos in yaml['interfaces'][i].get('qos', {}):
                 if qos not in available_qos:
                     raise KeyError("no %r QoS available" % qos)
-                q.append(available_qos[qos])
-            interfaces.append(Interface(i,
-                                        yaml['interfaces'][i]['description'],
-                                        q))
+                q[qos] = available_qos[qos]
+            interfaces[i]=Interface(yaml['interfaces'][i]['name'],
+                                    yaml['interfaces'][i]['description'],
+                                    q)
         return cls(yaml["clients"], interfaces)
 
-    def __init__(self, incoming, interfaces=[]):
+    def __init__(self, incoming, interfaces={}):
         """Create a new router.
 
         The new router will manage a set of clients connected to
@@ -53,17 +53,15 @@ class Router(object):
 
         :param incoming: name of the interface where clients are connected
         :type incoming: string
-        :param interfaces: list of interfaces
-        :type interfaces: list of :class:`Interface`
+        :param interfaces: dictionary of interfaces (keyed by interface name)
+        :type interfaces: dictionary of :class:`Interface`
         """
         self._incoming = incoming
         self._interfaces = interfaces
         self._clients = {}
         self._observers = []
         # Check that we don't have conflicting interfaces
-        ifaces = [x.name for x in interfaces]
-        ifaces.append(incoming)
-        if len(ifaces) != len(set(ifaces)):
+        if incoming in interfaces:
             raise ValueError("Duplicate interfaces are not allowed")
 
     def register(self, observer):
@@ -109,7 +107,7 @@ class Router(object):
     @property
     def interfaces(self):
         """Outgoing interfaces managed by this router as a dictionary"""
-        return dict([(x.name, x) for x in self._interfaces])
+        return self._interfaces.copy()
 
     def __eq__(self, other):
         if not isinstance(other, Router):
@@ -137,9 +135,8 @@ class Router(object):
         if client in self._clients:
             raise ValueError("Client %r is already bound" % client)
         # Search the interface
-        interface = self.interfaces[interface]
-        for q in interface.qos:
-            if q.name == qos:
+        for q in self.interfaces[interface].qos:
+            if q == qos:
                 logger.info("bind %r to %r" % (client, (interface, q)))
                 self._clients[client] = (interface, q)
                 self.notify("bind", client=client, interface=interface, qos=q)
@@ -173,7 +170,7 @@ class Router(object):
         # Rebind clients
         for client in state["clients"]:
             i, q = state["clients"][client]
-            self.bind(client, i.name, q.name)
+            self.bind(client, i, q)
 
 class Interface(object):
     """An interface represents an outgoing interface with its QoS settings.
@@ -182,7 +179,7 @@ class Interface(object):
     possible to append a new QoS settings.
     """
 
-    def __init__(self, name, description, qos=[]):
+    def __init__(self, name, description, qos={}):
         """Create a new interface.
 
         :param name: name of the outgoing interface
@@ -190,7 +187,7 @@ class Interface(object):
         :param description: description
         :type description: string
         :param qos: QoS settings associated
-        :type qos: list of :class:`QoS`
+        :type qos: dictionary of :class:`QoS`
         """
         self._name = name
         self._description = description
@@ -204,7 +201,7 @@ class Interface(object):
         return self._description
     @property
     def qos(self):
-        return self._qos[:]
+        return self._qos.copy()
 
     def __eq__(self, other):
         if not isinstance(other, Interface):

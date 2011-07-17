@@ -29,14 +29,16 @@ class RouterRPCService(RPCRequestHandler):
         interfaces = {}
         for i, interface in self.router.interfaces.items():
             interfaces[i] = {
+                'name': interface.name,
                 'description': interface.description,
                 }
             qos = {}
-            for q in interface.qos:
-                qos[q.name] = {
-                    'description': q.description,
+            for q, qq in interface.qos.items():
+                qos[q] = {
+                    'name': qq.name,
+                    'description': qq.description,
                     }
-                qos[q.name].update(q.settings)
+                qos[q].update(qq.settings)
             interfaces[i]['qos'] = qos
         return interfaces
 
@@ -54,7 +56,7 @@ class RouterRPCService(RPCRequestHandler):
             if client not in self.router.clients:
                 return None
             interface, qos = self.router.clients[client]
-            return (interface.name, qos.name)
+            return (interface, qos)
 
     @expose
     def bind_client(self, client, interface, qos):
