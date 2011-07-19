@@ -43,7 +43,7 @@ html.loading {
     color: #EEE;
     margin-left: auto;
     margin-right: auto;
-    width: 956px;
+    width: 756px;
     padding: 0;
 }
 
@@ -72,7 +72,7 @@ html.loading {
     display: inline;
 }
 #kitero-header dd {
-    margin-right: 6em;
+    margin-right: 4em;
     margin-left: 1em;
 }
 
@@ -85,7 +85,7 @@ html.loading {
     margin-left: auto;
     margin-right: auto;
     padding: 1em;
-    width: 956px;
+    width: 756px;
     -moz-border-radius: 8px;
     border-radius: 8px;
 }
