@@ -196,9 +196,22 @@ $(function() {
 	    display['interface'] = interface && interface.get("name") || 'None';
 	    var qos = this.model.qos();
 	    display['qos'] = qos && qos.get("name") || 'None';
-	    // Remove old information and render the new one
-	    this.el.children(":not(script)").remove();
-	    $("#kitero-header-template").tmpl(display).appendTo(this.el);
+	    // Did we already set the banner?
+	    var old = this.$("#kitero-settings");
+	    if (!old.length) {
+		// Apply the template
+		kitero.console.debug("Render settings banner")
+		this.el.children(":not(script)").remove();
+		this.$("#kitero-header-template").tmpl(display).appendTo(this.el);
+	    } else {
+		// Reuse the current template
+		_.each(display, function(value, key) {
+		    var el = old.children("#kitero-settings-" + key);
+		    if (value !== el.text()) {
+			el.text(value).effect('pulsate', {times: 3}, 500);
+		    }
+		}, this);
+	    }
 	    return this;
 	}
     });
