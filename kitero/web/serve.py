@@ -20,6 +20,13 @@ def run(config={}):
             port=config['port'],
             debug=config['debug'])
 
+def _run():
+    if len(sys.argv[1:]):
+        import yaml
+        run(yaml.safe_load(file(sys.argv[1])))
+    else:
+        run()
+
 if __name__ == "__main__": # pragma: no cover
     # Fix sys.path
     # This allows to be called with `python -m kitero.web.serve`
@@ -30,8 +37,4 @@ if __name__ == "__main__": # pragma: no cover
         sys.path.insert(index,
                         os.path.dirname(os.path.dirname(curdir)))
     # Run app
-    if len(sys.argv[1:]):
-        import yaml
-        run(yaml.safe_load(file(sys.argv[1])))
-    else:
-        run()
+    _run()
