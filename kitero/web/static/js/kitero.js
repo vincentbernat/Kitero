@@ -186,7 +186,6 @@ $(function() {
 	    // Render should be triggered when settings are changed or
 	    // when new interfaces are received.
 	    kitero.settings.bind("change", this.render);
-	    this.model.bind("reset", this.render);
 	},
 	render: function() {
 	    // Setup template variables
@@ -222,7 +221,7 @@ $(function() {
 	    "click": "select"
 	},
 	initialize: function() {
-	    _.bindAll(this, "render", "update_selected");
+	    _.bindAll(this, "update_selected");
 	    this.model.bind("change:selected", this.update_selected);
 	},
 	// User selects this QoS
@@ -246,10 +245,6 @@ $(function() {
     // Interfaces
     kitero.view.Interfaces = Backbone.View.extend({
 	el: $("#kitero-conns"),
-	initialize: function() {
-	    _.bindAll(this, 'render');
-	    this.model.bind("reset", this.render);
-	},
 	render: function() {
 	    this.el.children(":not(script)").remove();
 	    this.model.each(function(interface) {
@@ -294,14 +289,11 @@ $(function() {
 	    this.settings.bind("change", this.render);
 	    this.settings.bind("change", this.toggle_buttons);
 	    this.interfaces.bind("reset", this.render);
-	    // Initialize views. The associated model is a collection
-	    // of interfaces because we already have access to the
-	    // current settings through `kitero.settings`.
-	    this.settingsView = new kitero.view.Settings({model: this.interfaces});
-	    this.interfacesView = new kitero.view.Interfaces({model: this.interfaces});
 	    // Fetch settings and interfaces from the web service
 	    this.settings.fetch();
 	    this.interfaces.fetch();
+	    window.setInterval(function() { kitero.settings.fetch(); },
+			       5000);
 	},
 	// Enable or disable OK/Cancel buttons
 	toggle_buttons: function() {
@@ -334,12 +326,19 @@ $(function() {
 	    // loading state.
 	    if (this.settings.get("ip") && this.interfaces.length !== 0) {
 		kitero.console.debug("Display interface.")
+		// Initialize views. The associated model is a collection
+		// of interfaces because we already have access to the
+		// current settings through `kitero.settings`.
+		this.settingsView = new kitero.view.Settings({model: this.interfaces});
+		this.interfacesView = new kitero.view.Interfaces({model: this.interfaces});
 		// Initialize OK and cancel buttons
 		this.$('#cancel').button({icons: {primary: 'ui-icon-circle-close'},
 					  disabled: true});
 		this.$('#apply').button({icons: {primary: 'ui-icon-circle-check'},
 					 disabled: true});
 		$("html").removeClass("loading");
+		this.settingsView.render();
+		this.interfacesView.render();
 		// No need to redisplay the interface once it is displayed
 		this.settings.unbind("change", this.render);
 		this.interfaces.unbind("reset", this.render);
