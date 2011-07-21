@@ -42,13 +42,10 @@ $(function() {
 	    s_qos       : null	// selected qos (client side)
 	},
 	url: "api/1.0/current",
+	validate: function(response) {
+	    return (response.status === 0);
+	},
 	parse: function(response) {
-	    // First, check if the answer status code is appropriate
-	    if (response.status !== 0) {
-		var error = "/api/1.0/current request returned non-0 status";
-		kitero.console.error(error, response);
-		throw error;
-	    }
 	    // Complete the answer with currently selected values
 	    _.defaults(response.value,
 		       { s_interface: this.get("s_interface") || response.value.interface,
@@ -138,13 +135,10 @@ $(function() {
     kitero.collection.Interfaces = Backbone.Collection.extend({
 	model: kitero.model.Interface,
 	url: "api/1.0/interfaces",
+	validate: function(response) {
+	    return (response.status === 0);
+	},
 	parse: function(response) {
-	    // Check the answer status
-	    if (response.status !== 0) {
-		var error = "/api/1.0/interfaces request returned non-0 status";
-		kitero.console.error(error, response);
-		throw error;
-	    }
 	    // Transform the answer into an array.
 	    var answer = _.map(response.value, function(interface, eth) {
 		// QoS should be instantiated properly
@@ -290,10 +284,24 @@ $(function() {
 	    this.settings.bind("change", this.toggle_buttons);
 	    this.interfaces.bind("reset", this.render);
 	    // Fetch settings and interfaces from the web service
-	    this.settings.fetch();
-	    this.interfaces.fetch();
-	    window.setInterval(function() { kitero.settings.fetch(); },
-			       5000);
+	    this.unavailable = _.once(this.unavailable);
+	    this.settings.fetch({ error: this.unavailable });
+	    this.interfaces.fetch({ error: this.unavailable });
+	},
+	// Display a dialog stating the unavailibility of the web service
+	unavailable: function() {
+	    var dialog = $('<div></div>')
+		.html("<img style='float: left; padding-right: 0.7em;' \
+                        src='static/kitero.png' width='32' height='32' /> \
+                      Kitérő web service is currently unavailable. You may try to \
+		      reload the application in case this is a transient \
+		      problem. Otherwise, please contact the administrator.")
+		.dialog({ modal: true,
+			  buttons: { "Reload": function() {window.location.reload();} },
+			  close: function() {window.location.reload();},
+			  title: "Kitérő web service unavailable",
+			  dialogClass: "alert"
+			});
 	},
 	// Enable or disable OK/Cancel buttons
 	toggle_buttons: function() {
@@ -309,7 +317,8 @@ $(function() {
 	    var view = this;
 	    // To be done: handle error case
 	    kitero.settings.save(null,
-				 { success: function() {
+				 { error: this.unavailable,
+				   success: function() {
 				     view.saving = false;
 				     view.toggle_buttons(); // Useless, but we don't know
 				     }
@@ -342,6 +351,14 @@ $(function() {
 		// No need to redisplay the interface once it is displayed
 		this.settings.unbind("change", this.render);
 		this.interfaces.unbind("reset", this.render);
+		// Schedule periodic refresh
+		this.scheduled = window.setInterval(function() {
+		    kitero.settings.fetch({ error: function() {
+			var that = kitero.app;
+			that.unavailable();
+			window.clearInterval(that.scheduled);
+		    }});
+		}, 5000);
 	    }
 	    return this;
 	}
