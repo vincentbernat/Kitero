@@ -89,6 +89,9 @@ html.loading {
     -moz-border-radius: 8px;
     border-radius: 8px;
 }
+#kitero-logo {
+    float: right;
+}
 
 #kitero-main h1, #kitero-main h3 {
     font-family: Verdana, Geneva, Tahoma, sans-serif;
@@ -103,6 +106,9 @@ html.loading {
     margin-left: 1em;
 }
 
+#kitero-conns {
+    clear: both;
+}
 #kitero-main div.kitero-conn {
     padding-left: 2em;
 }
