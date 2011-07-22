@@ -10,6 +10,7 @@ import time
 
 from kitero.web import app
 from kitero.web.rpc import RPCClient
+from kitero.web.serve import configure
 from kitero.helper.router import Router
 from kitero.helper.service import Service
 
@@ -40,6 +41,7 @@ qos:
     delay: 200ms 10ms
 """))
         self.service = Service({}, r) # helper
+        configure(app, dict(web=dict(expire=2)))
         self.app = app.test_client() # web
         time.sleep(0.1)
 
@@ -186,3 +188,46 @@ qos:
         self.assertEqual(rv.status_code, 404)
         rv = self.app.get("/api/1.1/current")
         self.assertEqual(rv.status_code, 404)
+
+    def test_expiration(self):
+        """Test expiration"""
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='192.168.1.16',
+                                               interface='eth1',
+                                               qos='qos1'))
+        time.sleep(1)
+        # Not expired
+        rv = self.app.get("/api/1.0/current",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='192.168.1.16',
+                                               interface='eth1',
+                                               qos='qos1'))
+        time.sleep(2.5)
+        # Expired
+        rv = self.app.get("/api/1.0/current",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='192.168.1.16'))
+        # Rebind
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='192.168.1.16',
+                                               interface='eth1',
+                                               qos='qos1'))
+        time.sleep(0.2)
+        # Not expired
+        rv = self.app.get("/api/1.0/current",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='192.168.1.16',
+                                               interface='eth1',
+                                               qos='qos1'))

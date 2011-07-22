@@ -5,7 +5,8 @@ default = {
         # Web interface should listen to this IP:port
         'listen': '0.0.0.0',
         'port': 8187,
-        'debug': False
+        'debug': False,
+        'expire': 15*60,        # Expire unalive clients after 15 minutes
         },
     'helper': {
         # Helper application should listen to this IP:port

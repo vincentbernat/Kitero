@@ -6,19 +6,23 @@ def run(config={}):
 
     :param config: configuration of the application
     """ 
+
+    from kitero.web import app
+    configure(app, config)
+    app.run(host=app.config['LISTEN'],
+            port=app.config['PORT'])
+
+def configure(app, config={}):
     # Load configuration
     import kitero.config
     config = kitero.config.merge(config)
-
-    # Update RPC client config
-    from kitero.web.rpc import RPCClient
-    RPCClient.config = config['helper']
-
-    from kitero.web import app
+    # Configure helper
+    app.config['HELPERIP'] = config['helper']['listen']
+    app.config['HELPERPORT'] = config['helper']['port']
+    # Configure the remaining
     config = config['web']
-    app.run(host=config['listen'],
-            port=config['port'],
-            debug=config['debug'])
+    for key in config:
+        app.config[key.upper()] = config[key]
 
 def _run(): # pragma: no cover
     if len(sys.argv[1:]):

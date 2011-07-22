@@ -6,6 +6,8 @@ except ImportError:
 import threading
 import time
 
+from kitero.web import app
+from kitero.web.serve import configure
 from kitero.web.rpc import RPCClient, RPCException
 from kitero.helper.router import Router
 from kitero.helper.service import Service
@@ -16,6 +18,8 @@ class TestRPCClient(unittest.TestCase):
         # Start the service
         self.service = Service({}, r)
         time.sleep(0.2)         # Safety
+        # Configure app
+        configure(app)
 
     def tearDown(self):
         # Hack to force close

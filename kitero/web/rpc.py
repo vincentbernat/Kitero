@@ -6,7 +6,7 @@ import traceback
 import logging
 logger = logging.getLogger("kitero.web.rpc")
 
-import kitero.config
+from kitero.web import app
 
 class RPCException(Exception):
     def __init__(self, exception, message, traceback):
@@ -27,7 +27,6 @@ class RPCClient(object):
     """
     client = None               # No connection made yet
     lock = threading.Lock()
-    config = kitero.config.merge()['helper']
 
     @classmethod
     def call(cls, method, *args):
@@ -73,7 +72,7 @@ class RPCClient(object):
                 try:
                     if cls.client is None:
                         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        client.connect((cls.config['listen'], cls.config['port']))
+                        client.connect((app.config['HELPERIP'], app.config['HELPERPORT']))
                         read, write = client.makefile('rb'), client.makefile('wb', 0)
                     else:
                         client, cls.client = cls.client, None
@@ -89,7 +88,7 @@ class RPCClient(object):
                         continue
                     logger.exception("unable to contact RPC server")
                     raise IOError(
-                        "unable to contact RPC server (%s:%d)" % (cls.config['listen'],
-                                                                  cls.config['port']))
+                        "unable to contact RPC server (%s:%d)" % (app.config['HELPERIP'],
+                                                                  app.config['HELPERPORT']))
             cls.client = client
             cls.read, cls.write = read, write
