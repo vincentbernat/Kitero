@@ -116,3 +116,20 @@ class TestCommandsWithVariables(unittest.TestCase):
                                       "echo bye",
                                       var1="hello1", var2="hello2", var3="hello3"),
                          ["hello1 hello2\n", "hello1 hello3\n", "bye\n"])
+
+class TestErrorCommands(unittest.TestCase):
+    def test_inexistant_command(self):
+        """Test an inexistant command with run_noerr"""
+        with self.assertRaises(CommandError) as ce:
+            Commands.run_noerr("i_do_not_exist")
+        self.assertEqual(ce.exception.command, "i_do_not_exist")
+        self.assertEqual(ce.exception.retcode, errno.ENOENT)
+
+    def test_false_command(self):
+        """Test a command that return non 0 result"""
+        self.assertEqual(Commands.run_noerr("false"), "")
+
+    def test_error_command_withoutput(self):
+        """Test a command with non-0 result and output"""
+        result = Commands.run_noerr("grep stuff /i_do_not_exist")
+        self.assertEqual(result[:6], "grep: ")

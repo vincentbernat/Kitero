@@ -186,7 +186,7 @@ class Service(object):
             # Create the router
             router = Router.load(config['router'])
             if binder is not None:
-                router.notify(binder)
+                router.register(binder)
             # Start service
             s = cls(config, router)
             s.wait()
@@ -196,5 +196,5 @@ class Service(object):
         sys.exit(0)
 
 if __name__ == "__main__": # pragma: no cover
-    # TODO: Should be run with a sensible binder.
-    Service.run()
+    from kitero.helper.binder import LinuxBinder
+    Service.run(binder=LinuxBinder())

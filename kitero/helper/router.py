@@ -138,8 +138,8 @@ class Router(object):
         for q in self.interfaces[interface].qos:
             if q == qos:
                 logger.info("bind %r to %r" % (client, (interface, q)))
-                self._clients[client] = (interface, q)
                 self.notify("bind", client=client, interface=interface, qos=q)
+                self._clients[client] = (interface, q)
                 return
         raise KeyError("No %r for %r" % (qos, interface))
 

@@ -21,13 +21,38 @@ class Commands(object):
         :rtype: string or a list of strings
         :raises: :exception:`CommandError`
         """
-        if not args:
+        return cls._run(args, kwargs)
+
+    @classmethod
+    def run_noerr(cls, *args, **kwargs):
+        """Run one or several commands event if their status is not 0.
+
+        If one command does not exist, we still get an error.
+
+        :returns: commands outputs
+        :rtype: string or a list of strings
+        :raises: :exception:`CommandError`
+        """
+        return cls._run(args, kwargs, ignore_errors=True)
+
+    @classmethod
+    def _run(cls, commands, substitutions, ignore_errors=False):
+        """Run a set of commands, apply substitutions and return  results.
+
+        :param commands: a list of commands
+        :type commands: list of strings
+        :param substitutions: substitutions to be applied to commands
+        :type substitutions: dictionary
+        :return: results
+        :rtype: a string if one command, an array otherwise
+        """
+        if not commands:
             return None
         index = 0
         results = []
-        for command in args:
-            arguments = [x % kwargs for x in shlex.split(command)]
-            logger.info("%s: run (%r)" % (arguments[0], " ".join(arguments)))
+        for command in commands:
+            arguments = [x % substitutions for x in shlex.split(command)]
+            logger.debug("%s: run (%r)" % (arguments[0], " ".join(arguments)))
             try:
                 process = subprocess.Popen(arguments,
                                            stdout=subprocess.PIPE,
@@ -36,10 +61,12 @@ class Commands(object):
                 raise CommandError(command, err.errno, index)
             output, _ = process.communicate()
             retcode = process.poll()
-            logger.info("%s: finished with code %d (%r)" % (arguments[0], retcode,
-                                                             " ".join(arguments)))
-            if retcode:
-                raise CommandError(command, retcode, index)
+            logger.debug("%s: finished with code %d (%r: %r)" % (
+                    arguments[0], retcode,
+                    " ".join(arguments),
+                    len(output)>40 and (output[:40] + '...') or output))
+            if retcode and not ignore_errors:
+                raise CommandError(command, retcode, index, output=output)
             results.append(output)
             index = index + 1
         if len(results) == 1:
@@ -49,7 +76,7 @@ class Commands(object):
 class CommandError(Exception):
     """Exception describing an error in a command."""
 
-    def __init__(self, command, retcode, index=None):
+    def __init__(self, command, retcode, index=None, output=None):
         """Build a new exception.
 
         :param command: the command being executed

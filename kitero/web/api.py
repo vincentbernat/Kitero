@@ -29,7 +29,6 @@ class Ping(object):
         with self.lock:
             clients = self.clients.keys()
             current = time.time()
-            print self.clients, time.time()
             for client in clients:
                 if current - self.clients[client] > app.config['EXPIRE']:
                     # Expiration of `client`

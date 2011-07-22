@@ -21,6 +21,11 @@
 #   ip route show
 #   ip route add default via 192.168.2.1
 
+# Kitérő will use routing tables named after the output interface
+# name. You need to declare them in `/etc/iproute2/rt_tables` and
+# populate them. For example, with `ip route add default via
+# 192.168.2.1 table eth2`
+
 PROGNAME="$0"
 PROGARGS="$@"
 
@@ -55,7 +60,7 @@ setup_interfaces() {
 start_vm() {
     echo "[+] Start kitero VM"
     screen -t R1 \
-	linux uts=R1 \
+	linux uts=R1 mem=64M \
 	root=/dev/root con=null ssl0=fd:0,fd:1 rootfstype=hostfs init=$PWD/setup \
 	eth0=tuntap,kitero,, \
 	eth1=daemon,,unix,$PWD/switch.socket \
