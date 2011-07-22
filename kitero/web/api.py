@@ -45,6 +45,15 @@ def current():
     This API should be requested from time to time to let us know that
     the client is still alive. As soon as a client is not alive
     anymore, we may unbind it.
+
+    The returned value exhibits the following format::
+
+        { ip: '172.147.12.15',
+          interface: 'eth1',
+          qos: 'qos1' }
+
+    If no interface is bound to the client, ``interface`` and ``qos``
+    are absent of the answer.
     """
     client = flask.request.remote_addr
     ping.expire()
@@ -54,7 +63,40 @@ def current():
 @app.route("/api/1.0/interfaces", methods=['GET'])
 @jsonify
 def interfaces():
-    """Return the list of available interfaces."""
+    """Return the list of available interfaces.
+
+    The returned value exhibits the following format::
+
+      {
+        "eth2": {
+          "name": "WAN", 
+          "description": "My second interface",
+          "qos": {
+            "qos1": {
+              "name": "100M", 
+              "description": "My first QoS",
+              "bandwidth": "100mbps"
+            }, 
+            "qos3": {
+              "name": "1M", 
+              "description": "My third QoS",
+              "bandwidth": "1mbps"
+            }
+          }
+        }, 
+        "eth1": {
+          "name": "LAN", 
+          "description": "My first interface",
+          "qos": {
+            "qos1": {
+              "name": "100M", 
+              "description": "My first QoS",
+              "bandwidth": "100mbps"
+            }
+          }
+        }
+      }
+    """
     interfaces = RPCClient.call("interfaces")
     return interfaces
 
@@ -62,6 +104,8 @@ def interfaces():
 @jsonify
 def bind(interface, qos):
     """Allow to set the current interface for the client.
+
+    The result of this function is the same as :func:`current`.
 
     :param interface: Output interface requested
     :param qos: QoS settings requested
@@ -75,6 +119,8 @@ def bind(interface, qos):
 @jsonify
 def unbind():
     """Unbind the client.
+
+    The result of this function is the same as :func:`current`.
     """
     client = flask.request.remote_addr
     RPCClient.call("unbind_client", client)

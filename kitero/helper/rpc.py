@@ -27,17 +27,18 @@ class RPCRequestHandler(SocketServer.StreamRequestHandler):
         :return: answer
         :rtype: JSON string
 
-        If there is an exception, the returned JSON string is:
+        If there is an exception, the returned JSON string is::
 
             { status: -1,
               exception: {
                 class: 'ValueError',
                 message: 'Incorrect blah blah blah',
-                traceback: 'Traceback (most recent call last)\n...'
+                traceback: 'Traceback (most recent call last)...'
               }
             }
 
-        If there is no exception, the returned JSON string is :
+        If there is no exception, the returned JSON string is::
+
             { status: 0, value: ...}
         """
         try:

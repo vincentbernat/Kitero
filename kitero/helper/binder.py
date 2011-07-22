@@ -182,7 +182,22 @@ class LinuxBinder(object):
     We need to encode interfaces and QoS in firewall marks. A mark is
     a 32-bit int. The number of bits for the QoS is configurable
     (`max_users`). The number of bits for the interfaces is computed
-    from the number of interfaces.
+    from the number of interfaces. Each time a new user is bound to an
+    interface, we affect her a slot which is an integer that is only
+    affected to her in the context of the interface. The firewall mark
+    is built by combining the interface index with the slot number.
+
+    Classification ID are built using tickets which are just
+    integers associated to only one client. This ticket is multiplied
+    by 10 and we add 0, 1 or 2 to build the class of each QoS.
+
+    Keep in mind that the binder should work even in case of SNAT on
+    output interfaces. This makes things a bit difficult and explain
+    why we rely heavily on marks: in ``POSTROUTING``, the source
+    address is not present anymore in the ``mangle`` table while in
+    the other direction, ``PREROUTING``, it is not present yet. We
+    assume that there is no NAT on the interface where clients are
+    connected.
     """
 
     def __init__(self, max_users=256):
@@ -256,6 +271,10 @@ class LinuxBinder(object):
 
     def bind(self, client, interface, qos, bind=True):
         """Bind or unbind a user.
+
+        This is the method that will issue all `tc` and `iptables`
+        commands to ensure the binding of the user to the chosen
+        interface and QoS.
 
         :param client: IP of the user
         :type client: string
@@ -339,6 +358,10 @@ class LinuxBinder(object):
 
     def notify(self, event, router, **kwargs):
         """Handle an event.
+
+        The event is either binding a user or unbinding it. It this is
+        the first time we bind a user, :func:`setup` is called. The
+        real work for binding/unbinding is done by :func:`bind`.
 
         :param event: event received
         :type event: string

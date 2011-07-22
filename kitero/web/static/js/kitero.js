@@ -259,7 +259,11 @@ $(function() {
 		});
 		html.appendTo(this.el);
 	    }, this);
-	    this.el.accordion( { icons: {
+	    this.el.accordion( { autoHeight: false,
+				 collapsible: true,
+				 selected: false,
+				 fillSpace: true,
+				 icons: {
 		header: 'ui-icon-circle-triangle-e',
 		headerSelected: 'ui-icon-circle-triangle-s'},
                                  header: 'div.kitero-conn',

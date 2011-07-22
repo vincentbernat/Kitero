@@ -1,0 +1,99 @@
+# Sample configuration for Kitérő
+router:
+  clients: eth0
+  interfaces:
+    eth1:
+      name: LAN
+      description: "Fast Internet access through local network. This interface provides a wide choice of QoS to simulate other media."
+      qos:
+        - 100mbps
+        - 10mbps
+        - adsl20m
+        - adsl8m
+        - adsl1m
+        - adsl512k
+        - 3g
+        - 56k
+    eth2:
+      name: ADSL
+      description: "High speed Internet access over an ADSL line. Provided QoS for this interface only features bandwidth restrictions."
+      qos:
+        - noqos
+        - 8m
+        - 1m
+    eth3:
+      name: 56k
+      description: "Slow Internet access through a 56k modem (V92)."
+      qos:
+        - noqos
+    eth4:
+      name: 3G
+      description: "HSPA+ mobile broadband access."
+      qos:
+        - noqos
+  qos:
+    noqos:
+      name: "No QoS"
+      description: "No bandwidth restriction and no additional latency."
+    100mbps:
+      name: 100Mbps
+      description: "Restrict the bandwidth to 100 Mbps in both directions."
+      bandwidth: 100mbps
+    10mbps:
+      name: 10Mbps
+      description: "Restrict the bandwidth to 10 Mbps in both directions."
+      bandwidth: 10mbps
+    adsl20m:
+      name: "ADSL 20Mbps"
+      description: "Restrict download bandwidth 18 Mbps and upload to 1 Mbps. A latency of 20 ms is added to each packets."
+      bandwidth:
+        down: 18mbps
+        up: 1mbps
+      delay: 20ms 8ms
+    adsl8m:
+      name: "ADSL 8Mbps"
+      description: "Restrict download bandwidth 8 Mbps and upload to 512 kbps. A latency of 30 ms is added to each packets."
+      bandwidth:
+        down: 8mbps
+        up: 512kbps
+      delay: 30ms 12ms
+    adsl1m:
+      name: "ADSL 1Mbps"
+      description: "Restrict download bandwidth 1 Mbps and upload to 256 kbps. A latency of 40 ms is added to each packets."
+      bandwidth:
+        down: 1mbps
+        up: 256kbps
+      delay: 40ms 15ms
+    adsl512k:
+      name: "ADSL 512kbps"
+      description: "Restrict download bandwidth 512 kbps and upload to 128 kbps. A latency of 40 ms is added to each packets."
+      bandwidth:
+        down: 512kbps
+        up: 128kbps
+      delay: 40ms 20ms
+    3g:
+      name: "3G"
+      description: "Emulate an HSPA+ mobile broadband connectivity with download bandwidth 5 Mbps (128 kbps for upload) and latency of 60ms with important jittering."
+      bandwidth:
+        down: 5mbps
+        up: 128kbps
+      delay: 80ms 50ms
+    56k:
+      name: "56k modem"
+      description: "Very low speed connection emulating a 56k modem. 200 ms of latency is added to each packets."
+      bandwidth:
+        down: 52kbps
+        up: 30kbps
+      delay: 200ms 20ms
+    8m:
+      name: 8Mbps
+      description: "Restrict download bandwidth to 8 Mbps (1 Mbps for upload)."
+      bandwidth:
+        down: 8mbps
+        up: 1mbps
+    1m:
+      name: 1Mbps
+      description: "Restrict download bandwidth to 1 Mbps (200 kbps for upload)."
+      bandwidth:
+        down: 1mbps
+        up: 200kbps

@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger("kitero.helper.commands")
 
 class Commands(object):
-    """Helper class to run a set of commands"""
+    """Helper class to run a set of commands."""
 
     @classmethod
     def run(cls, *args, **kwargs):
@@ -15,11 +15,11 @@ class Commands(object):
         provided, they will be used for string formatting each
         command. The commands are **not** run inside a shell.
 
-        If a command fails, :exception:`CommandError` is raised.
+        If a command fails, :exc:`CommandError` is raised.
 
         :returns: commands outputs
         :rtype: string or a list of strings
-        :raises: :exception:`CommandError`
+        :raises: :exc:`CommandError`
         """
         return cls._run(args, kwargs)
 
@@ -31,7 +31,7 @@ class Commands(object):
 
         :returns: commands outputs
         :rtype: string or a list of strings
-        :raises: :exception:`CommandError`
+        :raises: :exc:`CommandError`
         """
         return cls._run(args, kwargs, ignore_errors=True)
 

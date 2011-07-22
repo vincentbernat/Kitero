@@ -6,10 +6,15 @@ logger = logging.getLogger("kitero.helper.router")
 class Router(object):
     """A router manages interfaces, QoS settings and clients.
 
-    A router can be created by providing a set of interfaces (each
-    interface contains a list of available QoS settings).
+    The router does not do anything by itself. It only lists available
+    interfaces and associated QoS as well as client bindings. When a
+    client is bound to an interface and QoS, the router will notify
+    its observers. One of them should take action for the binding of
+    the client by issuing some commands to the router.
 
-    Once created, it is not possible to add interfaces to a router.
+    A router can be created by providing a set of interfaces (each
+    interface contains a list of available QoS settings).  Once
+    created, it is not possible to add interfaces to a router.
 
     The router can be pickled. It can be observed too. The observer
     should be pickable too.

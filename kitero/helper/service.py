@@ -48,9 +48,8 @@ class RouterRPCService(RPCRequestHandler):
 
         :param client: IP address of the client
         :type client: string
-        :return: a tuple (interface, qos) if the client is bound.
-           `None` otherwise.
-        :rtype:" a tuple of strings
+        :return: a tuple (interface, qos) if the client is bound. `None` otherwise.
+        :rtype: a tuple of strings
         """
         with self.router_lock:
             if client not in self.router.clients:
