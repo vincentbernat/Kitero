@@ -61,7 +61,7 @@ $(function() {
 	    // Override save to use our URL scheme.
 	    // PUT or POST is not important. Both works.
 	    options || (options = {});
-	    options.url || (options.url = this.url + "/../interface/" + 
+	    options.url || (options.url = this.url + "/../bind/" + 
 			    encodeURIComponent(this.get("s_interface")) + "/" +
 			    encodeURIComponent(this.get("s_qos")));
 	    return Backbone.Model.prototype.save.call(this, attr, options);

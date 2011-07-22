@@ -86,7 +86,7 @@ qos:
     def test_bind(self):
         """Try to bind some clients."""
         # First client
-        rv = self.app.put("/api/1.0/interface/eth1/qos1",
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
                           environ_overrides={"REMOTE_ADDR": "192.168.1.15"})
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(rv.mimetype, 'application/json')
@@ -96,7 +96,7 @@ qos:
                                             'interface': 'eth1',
                                             'qos': 'qos1' })
         # Second client
-        rv = self.app.put("/api/1.0/interface/eth1/qos2",
+        rv = self.app.put("/api/1.0/bind/eth1/qos2",
                           environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(rv.mimetype, 'application/json')
@@ -126,7 +126,7 @@ qos:
                                                interface='eth1',
                                                qos='qos2'))
         # Rebind second client
-        rv = self.app.put("/api/1.0/interface/eth1/qos1",
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
                           environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
         self.assertEqual(rv.status_code, 200)
         rv = self.app.get("/api/1.0/current",
@@ -139,10 +139,10 @@ qos:
 
     def test_post_put_get(self):
         """Bind with POST and GET, get current with PUT"""
-        rv = self.app.get("/api/1.0/interface/eth1/qos1",
+        rv = self.app.get("/api/1.0/bind/eth1/qos1",
                           environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
         self.assertEqual(rv.status_code, 200)
-        rv = self.app.post("/api/1.0/interface/eth1/qos1",
+        rv = self.app.post("/api/1.0/bind/eth1/qos1",
                            environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
         self.assertEqual(rv.status_code, 200)
         rv = self.app.put("/api/1.0/current",
@@ -151,9 +151,32 @@ qos:
 
     def test_inexistant_bind(self):
         """Try to bind to incorrect interfaces"""
-        rv = self.app.put("/api/1.0/interface/eth3/qos1",
+        rv = self.app.put("/api/1.0/bind/eth3/qos1",
                           environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
         self.assertEqual(rv.status_code, 500)
+
+    def test_unbind(self):
+        """Try to unbind a client"""
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='192.168.1.16',
+                                               interface='eth1',
+                                               qos='qos1'))
+        rv = self.app.put("/api/1.0/unbind",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='192.168.1.16'))
+        # Double unbind
+        rv = self.app.put("/api/1.0/unbind",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.25"})
+        rv = self.app.put("/api/1.0/unbind",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.25"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='192.168.1.25'))
 
     def test_inexistant_api(self):
         """Call inexistant API"""

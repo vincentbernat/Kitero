@@ -20,7 +20,7 @@ def run(config={}):
             port=config['port'],
             debug=config['debug'])
 
-def _run():
+def _run(): # pragma: no cover
     if len(sys.argv[1:]):
         import yaml
         run(yaml.safe_load(file(sys.argv[1])))

@@ -269,6 +269,10 @@ qos:
             write.write("%s\n" % json.dumps(("bind_client", ip, eth, qos)))
             answer = json.loads(read.readline())
             self.assertEqual(answer["status"], 0)
+        def unbind(ip):
+            write.write("%s\n" % json.dumps(("unbind_client", ip)))
+            answer = json.loads(read.readline())
+            self.assertEqual(answer["status"], 0)
         def check(ip, value):
             write.write("%s\n" % json.dumps(("client", ip)))
             answer = json.loads(read.readline())
@@ -283,6 +287,10 @@ qos:
         bind('192.168.1.3', 'eth1', 'qos1')
         check('192.168.1.3', ['eth1', 'qos1'])
         check('192.168.1.4', None)
+        unbind('192.168.1.4')
+        check('192.168.1.4', None)
+        unbind('192.168.1.1')
+        check('192.168.1.1', None)
         sock.close()
 
     def tearDown(self):

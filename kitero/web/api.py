@@ -24,14 +24,14 @@ def current():
 
 @app.route("/api/1.0/interfaces", methods=['GET'])
 @jsonify
-def get_interfaces():
+def interfaces():
     """Return the list of available interfaces."""
     interfaces = RPCClient.call("interfaces")
     return interfaces
 
-@app.route("/api/1.0/interface/<interface>/<qos>", methods=['GET', 'POST', 'PUT'])
+@app.route("/api/1.0/bind/<interface>/<qos>", methods=['GET', 'POST', 'PUT'])
 @jsonify
-def set_interface(interface, qos):
+def bind(interface, qos):
     """Allow to set the current interface for the client.
 
     :param interface: Output interface requested
@@ -39,4 +39,13 @@ def set_interface(interface, qos):
     """
     client = flask.request.remote_addr
     RPCClient.call("bind_client", client, interface, qos)
+    return status(client)
+
+@app.route("/api/1.0/unbind", methods=['GET', 'POST', 'PUT'])
+@jsonify
+def unbind():
+    """Unbind the client.
+    """
+    client = flask.request.remote_addr
+    RPCClient.call("unbind_client", client)
     return status(client)

@@ -74,6 +74,17 @@ class RouterRPCService(RPCRequestHandler):
                 self.router.unbind(client)
             self.router.bind(client, interface, qos)
 
+    @expose
+    def unbind_client(self, client):
+        """Unbind a client.
+
+        :param client: IP address of the client
+        :type client: string
+        """
+        with self.router_lock:
+            if client in self.router.clients:
+                self.router.unbind(client)
+
 class Service(object):
     """Helper service.
 
