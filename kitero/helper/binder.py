@@ -55,7 +55,7 @@ class Mark(object):
             mask = mask + (((1<<self.bits['slots']) - 1) <<
                            (32 - self.bits['interfaces'] - self.bits['slots']))
             mark = mark + (slot << (32 - self.bits['interfaces'] - self.bits['slots']))
-        return ("0x%04x" % mark, "0x%04x" % mask)
+        return ("0x%08x" % mark, "0x%08x" % mask)
 
 class SlotsProvider(object):
     """Class to provide slot number associated to interfaces for clients"""
@@ -143,6 +143,7 @@ class TicketsProvider(object):
             i = i + 1
         i = i + 1
         self.clients[client] = i
+        return i
 
     def get(self, client):
         """Get the ticket associated to a client"""
@@ -205,8 +206,9 @@ class LinuxBinder(object):
         clean on exit.
         """
         self.interfaces = self.router.interfaces.keys() # Ordered interface list
-        self.mark = Mark(self.config['max_users'],      # Netfilter mark producer
-                         len(self.interfaces))
+        self.interfaces.sort()
+        self.mark = Mark(len(self.interfaces),                # Netfilter mark producer
+                         self.config['max_users'])
         self.slots = SlotsProvider(self.config['max_users'])  # Slot producer
         self.tickets = TicketsProvider()                      # Ticket producer
 
@@ -353,5 +355,3 @@ class LinuxBinder(object):
             self.bind(client, interface, qos, bind=False)
             slot = self.slots.release(client)
             ticket = self.tickets.release(client)
-        else:
-            raise ValueError("unknown event %r" % event)
