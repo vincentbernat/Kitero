@@ -36,7 +36,9 @@ qos:
   qos1:
     name: "100M"
     description: "My first QoS"
-    bandwidth: 100mbps
+    bandwidth:
+        down: 100mbps
+        up: 50mbps
     delay: 100ms 10ms distribution experimental
   qos2:
     name: "10M"
@@ -46,7 +48,9 @@ qos:
   qos3:
     name: "1M"
     description: "My third QoS"
-    delay: 500ms 30ms
+    delay:
+      down: 500ms 30ms
+      up: 10ms 2ms
   qos4:
     name: "unlimited"
     description: "My fourth QoS"
@@ -128,7 +132,7 @@ ip rule add fwmark 0x80000000/0xc0000000 table eth2
         self.router.bind("192.168.15.2", "eth1", "qos1")
         self.assertEqual(file(self.cur).read().split("\n"), (self.SETUP + 
 """tc class add dev eth1 parent 1: classid 1:10 drr
-tc qdisc add dev eth1 parent 1:10 handle 10: tbf rate 100mbps buffer 1600 limit 3000
+tc qdisc add dev eth1 parent 1:10 handle 10: tbf rate 50mbps buffer 1600 limit 3000
 tc qdisc add dev eth1 parent 10:1 handle 11: netem delay 100ms 10ms distribution experimental
 tc class add dev eth0 parent 1: classid 1:10 drr
 tc qdisc add dev eth0 parent 1:10 handle 10: tbf rate 100mbps buffer 1600 limit 3000
@@ -149,7 +153,7 @@ iptables -t mangle -A kitero-POSTROUTING -o eth0 -m connmark --mark 0x40000000/0
         self.router.bind("192.168.15.5", "eth2", "qos3")
         self.assertEqual(file(self.cur).read().split("\n"),
 """tc class add dev eth2 parent 1: classid 1:40 drr
-tc qdisc add dev eth2 parent 1:40 handle 40: netem delay 500ms 30ms
+tc qdisc add dev eth2 parent 1:40 handle 40: netem delay 10ms 2ms
 tc class add dev eth0 parent 1: classid 1:40 drr
 tc qdisc add dev eth0 parent 1:40 handle 40: netem delay 500ms 30ms
 iptables -t mangle -A kitero-PREROUTING -i eth0 -s 192.168.15.5 -j MARK --set-mark 0x80400000/0xffc00000

@@ -272,15 +272,23 @@ class LinuxBinder(object):
         slot = self.slots.get(client)
         mark = self.mark(self.interfaces.index(interface), slot)
         # tc qdisc and classes for the user
-        bw = self.router.interfaces[interface].qos[qos].settings.get("bandwidth", None)
-        delay = self.router.interfaces[interface].qos[qos].settings.get("delay", None)
+        def build(interface, qos, what):
+            r = self.router.interfaces[interface].qos[qos].settings.get(what, None)
+            result = { 'up': r, 'down': r }
+            if type(r) is dict:
+                result['up'] = r.get('up', None)
+                result['down'] = r.get('down', None)
+            return result
+        bw = build(interface, qos, "bandwidth")
+        delay = build(interface, qos, "delay")
         for iface in [interface, self.router.incoming]:
+            direction = (iface == self.router.incoming) and 'down' or 'up'
             opts=dict(iface=iface,
                       mark=mark[0],
                       ticket=ticket,
-                      bw=bw, delay=delay,
+                      bw=bw[direction], delay=delay[direction],
                       add=(bind and "add" or "del"))
-            if delay is not None or bw is not None:
+            if delay[direction] is not None or bw[direction] is not None:
                 # Create a deficit round robin scheduler
                 Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 drr",
                              **opts)
@@ -288,22 +296,22 @@ class LinuxBinder(object):
                 # No bandwidth, no delay, just use prio
                 Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 prio",
                              **opts)
-            if bw is not None and bind:
+            if bw[direction] is not None and bind:
                 # TBF for bandwidth limit...
                 Commands.run(
                     "tc qdisc %(add)s dev %(iface)s parent 1:%(ticket)s0 handle %(ticket)s0:"
                     "  tbf rate %(bw)s buffer 1600 limit 3000", **opts)
-                if delay is not None and bind:
+                if delay[direction] is not None and bind:
                     # ...and netem for adding delays
                     Commands.run(
                         "tc qdisc %%(add)s dev %%(iface)s parent %%(ticket)s0:1 "
                         "  handle %%(ticket)s1:"
-                        "  netem delay %s" % delay, **opts)
-            elif delay is not None and bind:
+                        "  netem delay %s" % delay[direction], **opts)
+            elif delay[direction] is not None and bind:
                 # Just netem
                 Commands.run(
                     "tc qdisc %%(add)s dev %%(iface)s parent 1:%%(ticket)s0 handle %%(ticket)s0:"
-                    "  netem delay %s" % delay, **opts)
+                    "  netem delay %s" % delay[direction], **opts)
         # iptables to classify
         Commands.run(
             # Mark the incoming packet from the client
