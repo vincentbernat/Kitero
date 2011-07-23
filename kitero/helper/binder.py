@@ -280,9 +280,14 @@ class LinuxBinder(object):
                       ticket=ticket,
                       bw=bw, delay=delay,
                       add=(bind and "add" or "del"))
-            # Create a deficit round robin scheduler
-            Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 drr",
-                         **opts)
+            if delay is not None or bw is not None:
+                # Create a deficit round robin scheduler
+                Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 drr",
+                             **opts)
+            else:
+                # No bandwidth, no delay, just use prio
+                Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 prio",
+                             **opts)
             if bw is not None and bind:
                 # TBF for bandwidth limit...
                 Commands.run(

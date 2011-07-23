@@ -31,6 +31,7 @@ interfaces:
     qos:
       - qos1
       - qos3
+      - qos4
 qos:
   qos1:
     name: "100M"
@@ -46,6 +47,9 @@ qos:
     name: "1M"
     description: "My third QoS"
     delay: 500ms 30ms
+  qos4:
+    name: "unlimited"
+    description: "My fourth QoS"
 """
         self.router = Router.load(yaml.load(doc))
         self.router.register(self.binder)
@@ -214,6 +218,21 @@ iptables -t mangle -D kitero-POSTROUTING -o eth0 -m connmark --mark 0x80000000/0
         self.binder.notify("unknwon", self.router)
         with self.assertRaises(ValueError):
             self.binder.notify("unknwon", Router("eth0"))
+
+    @out
+    def test_no_qos(self):
+        """Bind without QoS"""
+        self.router.bind("192.168.15.11", "eth2", "qos1")
+        os.unlink(self.cur)
+        self.router.bind("192.168.15.5", "eth2", "qos4")
+        self.assertEqual(file(self.cur).read().split("\n"),
+"""tc class add dev eth2 parent 1: classid 1:20 prio
+tc class add dev eth0 parent 1: classid 1:20 prio
+iptables -t mangle -A kitero-PREROUTING -i eth0 -s 192.168.15.5 -j MARK --set-mark 0x80400000/0xffc00000
+iptables -t mangle -A kitero-POSTROUTING -o eth2 -s 192.168.15.5 -m mark --mark 0x80400000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
+iptables -t mangle -A kitero-POSTROUTING -o eth2 -m connmark --mark 0x80400000/0xffc00000 -j CLASSIFY --set-class 1:20
+iptables -t mangle -A kitero-POSTROUTING -o eth0 -m connmark --mark 0x80400000/0xffc00000 -j CLASSIFY --set-class 1:20
+""".split("\n"))
 
     def tearDown(self):
         os.environ['PATH'] = self.oldpath
