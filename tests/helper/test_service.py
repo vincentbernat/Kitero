@@ -1,6 +1,6 @@
 try:
     import unittest2 as unittest
-except ImportError:
+except ImportError: # pragma: no cover
     import unittest
 
 import os
@@ -135,7 +135,7 @@ router:
     def test_attach_binder(self):
         """Attach a binder to service"""
         class Binder(object):
-            def notify(self, event, source, **kwargs):
+            def notify(self, event, source, **kwargs): # pragma: no cover
                 pass
         with self.assertRaises(SystemExit) as se:
             FakeService.run(["-dd", "-l", self.log, self.conf], binder=Binder)
@@ -183,11 +183,12 @@ qos:
         """Check if the service is running and accept several clients"""
         clients = []
         threads = []
-        for c in range(1, 5):
+        for c in range(1, 8):
             # Open connection to RPC
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(('127.0.0.1', 18861))
             clients.append(sock)
+        self.i = 0
         def work(c):
             read, write = c.makefile('rb'), c.makefile('wb', 0)
             # ping
@@ -204,14 +205,20 @@ qos:
                     ("client", "192.168.1.5")))
             answer = json.loads(read.readline())
             self.assertEqual(answer["status"], 0)
-            self.assertEqual(answer["value"], ("eth1", "qos1"))
+            self.assertEqual(answer["value"], ["eth1", "qos1"])
             c.close()
+            self.i = self.i + 1 # global lock
+        # Try outside a thread just to check
+        work(clients.pop())
+        next = clients.pop()
         for c in clients:
-            threads.append(threading.Thread(target=work, args=c))
+            threads.append(threading.Thread(target=work, args=(c,)))
         for t in threads:
             t.start()
         for t in threads:
             t.join()
+        work(next)
+        self.assertEqual(self.i, 7)
 
     def test_service_router(self):
         """Grab router information from the service"""

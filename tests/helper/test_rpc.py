@@ -1,6 +1,6 @@
 try:
     import unittest2 as unittest
-except ImportError:
+except ImportError: # pragma: no cover
     import unittest
 
 import socket
@@ -10,7 +10,7 @@ import time
 from kitero.helper.rpc import RPCRequestHandler, RPCServer, expose
 
 class DummyRPCHandler(RPCRequestHandler):
-    def not_exposed(self):
+    def not_exposed(self): # pragma: no cover
         return "Hello"
 
     @expose

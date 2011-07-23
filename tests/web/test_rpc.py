@@ -1,6 +1,6 @@
 try:
     import unittest2 as unittest
-except ImportError:
+except ImportError: # pragma: no cover
     import unittest
 
 import threading
@@ -26,17 +26,20 @@ class TestRPCClient(unittest.TestCase):
         RPCClient.clean()
         self.service.stop()
 
-    def atest_normal_operation(self):
+    def test_normal_operation(self):
         """Request some attributes from the RPC service"""
         threads = []
+        self.i = 0
         def work():
             RPCClient.call("interfaces")
+            self.i = self.i + 1
         for c in range(1,10):
             t = threading.Thread(target=work)
             threads.append(t)
             t.start()
         for t in threads:
             t.join()
+        self.assertEqual(self.i, 9)
 
     def test_reconnection(self):
         """Check if we can reconnect"""
