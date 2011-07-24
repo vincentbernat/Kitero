@@ -1,0 +1,7 @@
+include README
+include requirements.txt
+include kitero/web/templates/*.html
+include kitero/web/static/css/*.css
+include kitero/web/static/js/*.js
+include kitero/web/static/images/*.jpg
+include kitero/web/static/images/*.png
