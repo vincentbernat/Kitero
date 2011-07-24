@@ -244,17 +244,17 @@ qos:
     name: "100M"
     description: "My first QoS"
     bandwidth: 100mbps
-    delay: 100ms 10ms distribution experimental
+    netem: delay 100ms 10ms distribution experimental
   qos2:
     name: "10M"
     description: "My second QoS"
     bandwidth: 10mbps
-    delay: 200ms 10ms
+    netem: delay 200ms 10ms
   qos3:
     name: "1M"
     description: "My third QoS"
     bandwidth: 1mbps
-    delay: 500ms 30ms
+    netem: delay 500ms 30ms
 """
         r = Router.load(yaml.load(doc))
         self.assertEqual(r.incoming, "eth0")
@@ -263,18 +263,18 @@ qos:
                          Interface("LAN", "My first interface",
                                     qos={'qos1': QoS("100M", "My first QoS",
                                              {"bandwidth": "100mbps",
-                                              "delay": "100ms 10ms distribution experimental"}),
+                                              "netem": "delay 100ms 10ms distribution experimental"}),
                                          'qos2': QoS("10M", "My second QoS",
                                              {"bandwidth": "10mbps",
-                                              "delay": "200ms 10ms"})}))
+                                              "netem": "delay 200ms 10ms"})}))
         self.assertEqual(r.interfaces["eth2"],
                          Interface("WAN", "My second interface",
                                    qos={'qos1': QoS("100M", "My first QoS",
                                             {"bandwidth": "100mbps",
-                                             "delay": "100ms 10ms distribution experimental"}),
+                                             "netem": "delay 100ms 10ms distribution experimental"}),
                                         'qos3': QoS("1M", "My third QoS",
                                             {"bandwidth": "1mbps",
-                                             "delay": "500ms 30ms"})}))
+                                             "netem": "delay 500ms 30ms"})}))
         self.assertEqual(len(r.interfaces), 2)
 
     def test_load_unknown_qos(self):

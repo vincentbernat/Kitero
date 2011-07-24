@@ -163,17 +163,17 @@ qos:
     name: 100M
     description: "My first QoS"
     bandwidth: 100mbps
-    delay: 100ms 10ms distribution experimental
+    netem: delay 100ms 10ms distribution experimental
   qos2:
     name: 10M
     description: "My second QoS"
     bandwidth: 10mbps
-    delay: 200ms 10ms
+    netem: delay 200ms 10ms
   qos3:
     name: 1M
     description: "My third QoS"
     bandwidth: 1mbps
-    delay: 500ms 30ms
+    netem: delay 500ms 30ms
 """))
         # Start the service in a separate process
         self.service = Service({}, r)
@@ -239,12 +239,12 @@ qos:
                             'name': '100M',
                             'description': "My first QoS",
                             "bandwidth": "100mbps",
-                            "delay": "100ms 10ms distribution experimental" },
+                            "netem": "delay 100ms 10ms distribution experimental" },
                         'qos2': {
                             'name': '10M',
                             'description': "My second QoS",
                             "bandwidth": "10mbps",
-                            "delay": "200ms 10ms" }
+                            "netem": "delay 200ms 10ms" }
                         }
                     },
                 "eth2": {
@@ -255,12 +255,12 @@ qos:
                             'name': '100M',
                             'description': "My first QoS",
                             "bandwidth": "100mbps",
-                            "delay": "100ms 10ms distribution experimental" },
+                            "netem": "delay 100ms 10ms distribution experimental" },
                         'qos3': {
                             'name': '1M',
                             'description': "My third QoS",
                             "bandwidth": "1mbps",
-                            "delay": "500ms 30ms" }
+                            "netem": "delay 500ms 30ms" }
                         }
                     }
                 })

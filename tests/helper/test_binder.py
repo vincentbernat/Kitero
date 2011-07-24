@@ -39,18 +39,18 @@ qos:
     bandwidth:
         down: 100mbps
         up: 50mbps
-    delay: 100ms 10ms distribution experimental
+    netem: delay 100ms 10ms distribution experimental
   qos2:
     name: "10M"
     description: "My second QoS"
     bandwidth: 10mbps
-    delay: 200ms 10ms
+    netem: delay 200ms 10ms
   qos3:
     name: "1M"
     description: "My third QoS"
-    delay:
-      down: 500ms 30ms
-      up: 10ms 2ms
+    netem:
+      down: delay 500ms 30ms
+      up: delay 10ms 2ms
   qos4:
     name: "unlimited"
     description: "My fourth QoS"

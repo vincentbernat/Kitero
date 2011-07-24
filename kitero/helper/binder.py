@@ -280,20 +280,20 @@ class LinuxBinder(object):
                 result['down'] = r.get('down', None)
             return result
         bw = build(interface, qos, "bandwidth")
-        delay = build(interface, qos, "delay")
+        netem = build(interface, qos, "netem")
         for iface in [interface, self.router.incoming]:
             direction = (iface == self.router.incoming) and 'down' or 'up'
             opts=dict(iface=iface,
                       mark=mark[0],
                       ticket=ticket,
-                      bw=bw[direction], delay=delay[direction],
+                      bw=bw[direction], netem=netem[direction],
                       add=(bind and "add" or "del"))
-            if delay[direction] is not None or bw[direction] is not None:
+            if netem[direction] is not None or bw[direction] is not None:
                 # Create a deficit round robin scheduler
                 Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 drr",
                              **opts)
             else:
-                # No bandwidth, no delay, just use prio
+                # No bandwidth, no netem, just use prio
                 Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 prio",
                              **opts)
             if bw[direction] is not None and bind:
@@ -301,17 +301,17 @@ class LinuxBinder(object):
                 Commands.run(
                     "tc qdisc %(add)s dev %(iface)s parent 1:%(ticket)s0 handle %(ticket)s0:"
                     "  tbf rate %(bw)s buffer 1600 limit 3000", **opts)
-                if delay[direction] is not None and bind:
-                    # ...and netem for adding delays
+                if netem[direction] is not None and bind:
+                    # ...and netem
                     Commands.run(
                         "tc qdisc %%(add)s dev %%(iface)s parent %%(ticket)s0:1 "
                         "  handle %%(ticket)s1:"
-                        "  netem delay %s" % delay[direction], **opts)
-            elif delay[direction] is not None and bind:
+                        "  netem %s" % netem[direction], **opts)
+            elif netem[direction] is not None and bind:
                 # Just netem
                 Commands.run(
                     "tc qdisc %%(add)s dev %%(iface)s parent 1:%%(ticket)s0 handle %%(ticket)s0:"
-                    "  netem delay %s" % delay[direction], **opts)
+                    "  netem %s" % netem[direction], **opts)
         # iptables to classify
         Commands.run(
             # Mark the incoming packet from the client

@@ -33,12 +33,12 @@ qos:
     name: 100M
     description: "My first QoS"
     bandwidth: 100mbps
-    delay: 100ms 10ms distribution experimental
+    netem: delay 100ms 10ms distribution experimental
   qos2:
     name: 10M
     description: "My second QoS"
     bandwidth: 10mbps
-    delay: 200ms 10ms
+    netem: delay 200ms 10ms
 """))
         self.service = Service({}, r) # helper
         configure(app, dict(web=dict(expire=2)))
@@ -73,12 +73,12 @@ qos:
                                    'description': 'My second interface'},
                           'eth1': {'qos': 
                                    {'qos1':
-                                        {'delay': '100ms 10ms distribution experimental',
+                                        {'netem': 'delay 100ms 10ms distribution experimental',
                                          'bandwidth': '100mbps',
                                          'name': '100M',
                                          'description': 'My first QoS'},
                                     'qos2':
-                                        {'delay': '200ms 10ms',
+                                        {'netem': 'delay 200ms 10ms',
                                          'bandwidth': '10mbps',
                                          'name': '10M',
                                          'description': 'My second QoS'}},
