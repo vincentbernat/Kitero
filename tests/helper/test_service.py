@@ -13,9 +13,11 @@ import time
 import yaml
 import socket
 import json
+import zope.interface
 
 from kitero.helper.service import Service
 from kitero.helper.router import Router, Interface, QoS
+from kitero.helper.interface import IObserver
 
 class TestBadOptions(unittest.TestCase):
     def test_without_args(self):
@@ -135,10 +137,11 @@ router:
     def test_attach_binder(self):
         """Attach a binder to service"""
         class Binder(object):
+            zope.interface.implements(IObserver)
             def notify(self, event, source, **kwargs): # pragma: no cover
                 pass
         with self.assertRaises(SystemExit) as se:
-            FakeService.run(["-dd", "-l", self.log, self.conf], binder=Binder)
+            FakeService.run(["-dd", "-l", self.log, self.conf], binder=Binder())
         self.assertEqual(se.exception, 0)
 
 class TestRPCService(unittest.TestCase):

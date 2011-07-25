@@ -1,8 +1,10 @@
+import zope.interface
 import logging
 logger = logging.getLogger("kitero.helper.binder")
 
 from kitero.helper.router import Router
 from kitero.helper.commands import Commands
+from kitero.helper.interface import IObserver
 
 class Mark(object):
     """Class to provides Netfilter marks for each interface/slot."""
@@ -199,6 +201,8 @@ class LinuxBinder(object):
     assume that there is no NAT on the interface where clients are
     connected.
     """
+
+    zope.interface.implements(IObserver)
 
     def __init__(self, max_users=256):
         """Not really the constructor of the class.
