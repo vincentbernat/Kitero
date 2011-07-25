@@ -1,12 +1,13 @@
 import zope.interface
 
-class IObserver(zope.interface.Interface):
-    """Interface for an observer"""
+class IBinder(zope.interface.Interface):
+    """Interface for a binder to be used by :class:`kitero.helper.router.Router`"""
 
-    def notify(event, source, **kwargs):
-        """Callback used when an event happens.
+    def notify(event, router, **kwargs):
+        """Callback used when an event (i.e a binding) happens.
 
-        :param event: event received
+        :param event: event received (bind or unbind)
         :type event: string
-        :param source: source object that triggered the event
+        :param router: router that triggered the event
+        :type router: instance of :class:`Router`
         """

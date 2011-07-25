@@ -11,7 +11,7 @@ import cPickle as pickle
 import zope.interface
 
 from kitero.helper.router import Router, Interface, QoS
-from kitero.helper.interface import IObserver
+from kitero.helper.interface import IBinder
 
 class TestQoSBasic(unittest.TestCase):
     def test_build_empty_qos(self):
@@ -339,7 +339,7 @@ class TestRouterObserver(unittest.TestCase):
         """Register an observer and receive events"""
         last = {}
         class Observer(object):
-            zope.interface.implements(IObserver)
+            zope.interface.implements(IBinder)
             def notify(self, event, source, **kwargs):
                 last['event'] = event
                 last['source'] = source
@@ -375,7 +375,7 @@ class TestRouterObserver(unittest.TestCase):
         """Register several observers"""
         events = {}
         class Observer(object):
-            zope.interface.implements(IObserver)
+            zope.interface.implements(IBinder)
             def notify(self, event, source, **kwargs):
                 events[self] = event
         obs1 = Observer()
@@ -405,7 +405,7 @@ class TestRouterObserver(unittest.TestCase):
             shutil.rmtree(temp)
 
 class PickableObserver(object):
-    zope.interface.implements(IObserver)
+    zope.interface.implements(IBinder)
     def __init__(self, target):
         self.target = target
     def notify(self, event, source, **kwargs):

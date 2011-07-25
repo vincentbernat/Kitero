@@ -42,11 +42,16 @@ and each interface contains the list of associated QoS settings.
 Binder
 ``````
 
+.. module:: kitero.helper.interface
+
 Each time a client is bound or unbound from an interface, the
 ``notify`` method is called with event equal to ``bind`` or
 ``unbind``. The important thing to notice about binders is that all
-the work should be done in ``notify``, including setting up the router
-the first time.
+the work should be done in ``notify``. Each binder should implement
+the :class:`IBinder` interface.
+
+.. autoclass:: IBinder
+   :members:
 
 There is currently only one binder:
 ``kitero.helper.binder.LinuxBinder``. Therefore, there is no mechanism

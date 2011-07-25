@@ -4,7 +4,7 @@ logger = logging.getLogger("kitero.helper.binder")
 
 from kitero.helper.router import Router
 from kitero.helper.commands import Commands
-from kitero.helper.interface import IObserver
+from kitero.helper.interface import IBinder
 
 class Mark(object):
     """Class to provides Netfilter marks for each interface/slot."""
@@ -202,7 +202,7 @@ class LinuxBinder(object):
     connected.
     """
 
-    zope.interface.implements(IObserver)
+    zope.interface.implements(IBinder)
 
     def __init__(self, max_users=256):
         """Not really the constructor of the class.

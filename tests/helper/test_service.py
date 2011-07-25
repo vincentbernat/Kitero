@@ -17,7 +17,7 @@ import zope.interface
 
 from kitero.helper.service import Service
 from kitero.helper.router import Router, Interface, QoS
-from kitero.helper.interface import IObserver
+from kitero.helper.interface import IBinder
 
 class TestBadOptions(unittest.TestCase):
     def test_without_args(self):
@@ -137,7 +137,7 @@ router:
     def test_attach_binder(self):
         """Attach a binder to service"""
         class Binder(object):
-            zope.interface.implements(IObserver)
+            zope.interface.implements(IBinder)
             def notify(self, event, source, **kwargs): # pragma: no cover
                 pass
         with self.assertRaises(SystemExit) as se:

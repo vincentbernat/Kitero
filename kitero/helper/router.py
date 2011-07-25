@@ -3,7 +3,7 @@ from netaddr import IPAddress
 import logging
 logger = logging.getLogger("kitero.helper.router")
 
-from kitero.helper.interface import IObserver
+from kitero.helper.interface import IBinder
 
 class Router(object):
     """A router manages interfaces, QoS settings and clients.
@@ -79,15 +79,15 @@ class Router(object):
         the action as a string (`bind` or `unbind`), the source (this
         router) and some additional parameters that should be
         retrieved as keyword arguments. The observer needs to
-        implement the :class:`IObserver` interface.
+        implement the :class:`IBinder` interface.
 
         There is no way to unregister an observer. An observer should
         be pickable if the router has to be pickable.
 
         :param observer: observer object to be notified
         """
-        if not IObserver.providedBy(observer):
-            raise ValueError("%r does not implement IObserver interface" % observer)
+        if not IBinder.providedBy(observer):
+            raise ValueError("%r does not implement IBinder interface" % observer)
         self._observers.append(observer)
 
     def notify(self, event, **kwargs):
