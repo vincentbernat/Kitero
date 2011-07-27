@@ -1,6 +1,7 @@
 import zope.interface
 import logging
 logger = logging.getLogger("kitero.helper.binder")
+import cPickle as pickle
 
 from kitero.helper.router import Router
 from kitero.helper.commands import Commands
@@ -395,3 +396,54 @@ class LinuxBinder(object):
             self.bind(client, interface, qos, bind=False)
             slot = self.slots.release(client)
             ticket = self.tickets.release(client)
+
+class PersistentBinder(object):
+    """Keep track of client bindings and allow persistence to a file.
+
+    This binder will just record each client binding into a file and
+    allow to restore them when the application restarts.
+    """
+
+    zope.interface.implements(IBinder)
+
+    def __init__(self, save):
+        """Initialize this instance of saving binder.
+
+        :param save: file where to store persistent information
+        :type save: string
+        """
+        self.save = save
+        self.bindings = {}
+
+    def restore(self, router):
+        """Restore bindings from saved file
+
+        :param router: router where to restore bindings
+        :type router: :class:`Router`
+        """
+        logger.info("restore bindings from %s" % self.save)
+        self.bindings = pickle.load(file(self.save, "r"))
+        for client in self.bindings:
+            eth, qos = self.bindings[client]
+            try:
+                router.bind(client, eth, qos)
+            except:
+                logger.exception("unable to rebind %r" % client)
+
+    def notify(self, event, router, **kwargs):
+        """Handle an event.
+
+        The event is either binding a user or unbinding it. We update
+        our client table and save it to disk.
+
+        :param event: event received
+        :type event: string
+        :param router: router that triggered the event
+        :type router: instance of :class:`Router`
+        """
+        if event == "bind":
+            self.bindings[kwargs['client']] = (kwargs['interface'], kwargs['qos'])
+        elif event == "unbind":
+            del self.bindings[kwargs['client']]
+        logger.info("save bindings to %s" % self.save)
+        pickle.dump(self.bindings, file(self.save, "w"))

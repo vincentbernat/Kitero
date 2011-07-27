@@ -46,6 +46,10 @@ Directive  Default       Comment
                          should listen to.
 ``port``   ``18861``     Port the helper service
                          should listen to.
+``save``   None          Save and restore bindings
+                         from this file. This allows
+                         bindings to remain persistent
+                         across restart of the helper.
 ========== ============= ====================
 
 ``router``

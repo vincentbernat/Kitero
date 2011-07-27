@@ -53,13 +53,14 @@ the :class:`IBinder` interface.
 .. autoclass:: IBinder
    :members:
 
-There is currently only one binder:
-``kitero.helper.binder.LinuxBinder``. Therefore, there is no mechanism
-to select a binder but this can be added in ``kitero.helper.service``
-module.
+There is currently only two binders:
+``kitero.helper.binder.LinuxBinder`` and
+``kitero.helper.binder.SaveBinder``.
 
 .. module:: kitero.helper.binder
 .. autoclass:: LinuxBinder
+   :members:
+.. autoclass:: SaveBinder
    :members:
 
 Commands

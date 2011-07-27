@@ -8,6 +8,7 @@ logger = logging.getLogger("kitero.helper.service")
 
 from kitero.helper.router import Router
 from kitero.helper.rpc import RPCServer, RPCRequestHandler, expose
+from kitero.helper.binder import PersistentBinder
 import kitero.config
 
 class RouterRPCService(RPCRequestHandler):
@@ -105,6 +106,15 @@ class Service(object):
         # Create RPC service
         config = kitero.config.merge(config)
         config = config['helper']
+        # Bind persistency module
+        save = config.get("save", None)
+        if save is not None:
+            save = PersistentBinder(save)
+            try:
+                save.restore(router)
+            except IOError as e:
+                logger.warning("unable to restore previous configuration: %s", e)
+            router.register(save)
         RouterRPCService.router = router
         self.server = RPCServer.run(config['listen'],
                                     config['port'],
@@ -132,6 +142,7 @@ class Service(object):
 
         :param args: list of command line arguments
         :type args: list of strings
+        :param binder: binder to register to the router
         """
         from optparse import OptionParser
         usage = "usage: %prog [options] config.yaml"
@@ -184,6 +195,7 @@ class Service(object):
             config = kitero.config.merge(config)
             # Create the router
             router = Router.load(config['router'])
+            # Add the regular binder to it
             if binder is not None:
                 router.register(binder)
             # Start service

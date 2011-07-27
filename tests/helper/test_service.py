@@ -305,3 +305,67 @@ qos:
 
     def tearDown(self):
         self.service.stop()
+
+class TestPersistency(unittest.TestCase):
+
+    def setUp(self):
+        self.temp = tempfile.mkdtemp()
+        self.config = yaml.load("""
+clients: eth0
+interfaces:
+  eth1:
+    name: LAN
+    description: "My first interface"
+    qos:
+      - qos1
+      - qos2
+qos:
+  qos1:
+    name: 100M
+    description: "My first QoS"
+    bandwidth: 100mbps
+    netem: delay 100ms 10ms distribution experimental
+  qos2:
+    name: 10M
+    description: "My second QoS"
+    bandwidth: 10mbps
+    netem: delay 200ms 10ms
+""")
+        self.realSetup()
+
+    def realSetup(self):
+        self.router = Router.load(self.config)
+        # Start the service in a separate process
+        self.service = Service(dict(helper=dict(save=os.path.join(self.temp, "save.pickle"))),
+                               self.router)
+        time.sleep(0.2)         # Safety
+
+    def test_persistency(self):
+        """Test the use of persistency"""
+        self.assertEqual(self.router.clients, {})
+        self.router.bind("192.168.1.15", "eth1", "qos1")
+        self.router.bind("192.168.1.16", "eth1", "qos2")
+        self.router.bind("192.168.1.17", "eth1", "qos2")
+        self.router.unbind("192.168.1.17")
+        self.assertEqual(self.router.clients["192.168.1.15"], ("eth1", "qos1"))
+        self.assertEqual(self.router.clients["192.168.1.16"], ("eth1", "qos2"))
+        self.service.stop()
+        self.realSetup()
+        # Clients should have been restored
+        self.assertEqual(self.router.clients["192.168.1.15"], ("eth1", "qos1"))
+        self.assertEqual(self.router.clients["192.168.1.16"], ("eth1", "qos2"))
+
+    def test_partial_persistency(self):
+        """Test the use of persistency when configuration has changed"""
+        self.router.bind("192.168.1.15", "eth1", "qos1")
+        self.router.bind("192.168.1.16", "eth1", "qos2")
+        self.service.stop()
+        self.config['interfaces']['eth1']['qos'].remove('qos2')
+        del self.config['qos']['qos2']
+        self.realSetup()
+        self.assertEqual(self.router.clients["192.168.1.15"], ("eth1", "qos1"))
+        self.assertNotIn("192.168.1.16", self.router.clients)
+
+    def tearDown(self):
+        self.service.stop()
+        shutil.rmtree(self.temp)

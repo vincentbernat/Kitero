@@ -13,6 +13,8 @@ from functools import wraps
 from kitero.helper.binder import LinuxBinder
 from kitero.helper.router import Router
 
+# SaveBinder is tested in test_service.py
+
 class TestBinder(unittest.TestCase):
     def setUp(self):
         self.binder = LinuxBinder()
