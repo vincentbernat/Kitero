@@ -100,6 +100,28 @@ def interfaces():
     interfaces = RPCClient.call("interfaces")
     return interfaces
 
+@app.route("/api/1.0/stats", methods=['GET'])
+@jsonify
+def stats():
+    """Return statistics for each interface.
+
+    The return value exhibits the following format::
+
+            {"eth1": {
+               "clients": 5,
+                "up": 45,
+                "down": 457,
+                "details": {
+                  "172.16.10.14": {"up": 0, "down": 0},
+                  "172.16.10.15": {"up": 0, "down": 0}
+                }
+            }}
+
+    All fields are optional and may not appear.
+    """
+    stats = RPCClient.call("stats")
+    return stats
+
 @app.route("/api/1.0/bind/<interface>/<qos>", methods=['GET', 'POST', 'PUT'])
 @jsonify
 def bind(interface, qos):

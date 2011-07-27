@@ -3,7 +3,7 @@ from netaddr import IPAddress
 import logging
 logger = logging.getLogger("kitero.helper.router")
 
-from kitero.helper.interface import IBinder
+from kitero.helper.interface import IBinder, IStatsProvider
 
 class Router(object):
     """A router manages interfaces, QoS settings and clients.
@@ -67,6 +67,7 @@ class Router(object):
         self._interfaces = interfaces
         self._clients = {}
         self._observers = []
+        self._stats = None
         # Check that we don't have conflicting interfaces
         if incoming in interfaces:
             raise ValueError("Duplicate interfaces are not allowed")
@@ -84,11 +85,17 @@ class Router(object):
         There is no way to unregister an observer. An observer should
         be pickable if the router has to be pickable.
 
+        Additionaly, if the observer provides :class:`IStatsProvider`
+        interface, it will be queried for statistics. Only one stat
+        provider is allowed (the last one will be used).
+
         :param observer: observer object to be notified
         """
         if not IBinder.providedBy(observer):
             raise ValueError("%r does not implement IBinder interface" % observer)
         self._observers.append(observer)
+        if IStatsProvider.providedBy(observer):
+            self._stats = observer
 
     def notify(self, event, **kwargs):
         """Notify all observers.
@@ -98,6 +105,44 @@ class Router(object):
         """
         for obs in self._observers:
             obs.notify(event, self, **kwargs)
+
+    @property
+    def stats(self):
+        """Return statistics about each interface.
+
+        See :class:`IStatsProvider` interface for the format of
+        statistics returned. We query the binder if it is able to
+        return statistics but we do some normalization. The number of
+        clients is replaced by the number of client the router know of
+        and each client will be listed even if the binder does not
+        return any stats.
+        """
+        # Grab stats from the binder if available
+        if self._stats is None:
+            stats = {}
+        else:
+            stats = self._stats.stats()
+        # Rebuild statistics using our information
+        result = {}
+        for interface in self._interfaces:
+            result[interface] = {}
+            clients = {}
+            for client in self._clients:
+                eth, qos = self._clients[client]
+                if eth == interface:
+                    # Copy stats for this client
+                    clients[client] = stats.get(
+                        interface, {}).get('details', {}).get(client, {})
+            result[interface]['clients'] = len(clients)
+            result[interface]['details'] = clients
+            # Stats for up/down
+            up = stats.get(interface, {}).get('up', None)
+            down = stats.get(interface, {}).get('down', None)
+            if up is not None:
+                result[interface]['up'] = up
+            if down is not None:
+                result[interface]['down'] = down
+        return result
 
     @property
     def incoming(self):

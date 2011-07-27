@@ -1,3 +1,4 @@
+import re
 import zope.interface
 import logging
 logger = logging.getLogger("kitero.helper.binder")
@@ -5,7 +6,7 @@ import cPickle as pickle
 
 from kitero.helper.router import Router
 from kitero.helper.commands import Commands
-from kitero.helper.interface import IBinder
+from kitero.helper.interface import IBinder, IStatsProvider
 
 class Mark(object):
     """Class to provides Netfilter marks for each interface/slot."""
@@ -203,7 +204,7 @@ class LinuxBinder(object):
     connected.
     """
 
-    zope.interface.implements(IBinder)
+    zope.interface.implements(IBinder, IStatsProvider)
 
     def __init__(self, max_users=256):
         """Not really the constructor of the class.
@@ -215,6 +216,7 @@ class LinuxBinder(object):
         self.config = {
             "prerouting": "kitero-PREROUTING",   # prerouting chain name
             "postrouting": "kitero-POSTROUTING", # postrouting chain name
+            "accounting": "kitero-ACCOUNTING",   # accounting chain name
             "max_users": max_users,              # maximum number of users **per interface**
             }
 
@@ -233,9 +235,11 @@ class LinuxBinder(object):
         self.tickets = TicketsProvider()                      # Ticket producer
 
         # Netfilter
-        for chain in [ "prerouting", "postrouting" ]:
+        for chain in [ "prerouting", "accounting", "postrouting" ]:
             subs = dict(chain = self.config[chain],
                         chain_upper = chain.upper())
+            if chain == "accounting":
+                subs['chain_upper'] = "POSTROUTING"
             logger.info("setup %(chain)s chain" % subs)
             # Cleanup old iptables rules
             Commands.run_noerr("iptables -t mangle -D %(chain_upper)s -j  %(chain)s",
@@ -337,7 +341,7 @@ class LinuxBinder(object):
                     "tc qdisc %(add)s dev %(iface)s parent 1:%(ticket)s0"
                     "  handle %(ticket)s0: sfq",
                     **opts)
-        # iptables to classify
+        # iptables to classify and accounting
         Commands.run(
             # Mark the incoming packet from the client
             "iptables -t mangle -%(A)s %(prerouting)s -i %(incoming)s"
@@ -354,6 +358,14 @@ class LinuxBinder(object):
             "iptables -t mangle -%(A)s %(postrouting)s"
             "  -o %(incoming)s -m connmark --mark %(mark)s/%(mask)s"
             "  -j CLASSIFY --set-class 1:%(ticket)s0",
+            # Accounting. Outgoing
+            "iptables -t mangle -%(A)s %(accounting)s"
+            "  -o %(outgoing)s -m connmark --mark %(mark)s/%(mask)s"
+            "  -m comment --comment up-%(outgoing)s-%(client)s",
+            # Accouting. Incoming
+            "iptables -t mangle -%(A)s %(accounting)s"
+            "  -o %(incoming)s -m connmark --mark %(mark)s/%(mask)s"
+            "  -m comment --comment down-%(outgoing)s-%(client)s",
             A=(bind and "A" or "D"),
             incoming=self.router.incoming,
             outgoing=interface,
@@ -397,6 +409,40 @@ class LinuxBinder(object):
             self.bind(client, interface, qos, bind=False)
             slot = self.slots.release(client)
             ticket = self.tickets.release(client)
+
+    STATSRE=re.compile(
+        r'^.* --comment "(?P<direction>up|down)-(?P<interface>[^"]+)-'
+        r'(?P<client>[0-9a-f:.]+)" -c \d+ (?P<bytes>\d+)$')
+
+    def stats(self):
+        """Return statistics for each interface and client."""
+        if self.router is None:
+            return {}           # Setup is not done yet
+        stats = {}
+        output = Commands.run("iptables -t mangle -v -S %(accounting)s",
+                              **self.config)
+        for line in output.split("\n"):
+            mo = self.STATSRE.match(line)
+            if mo:
+                interface = mo.group('interface')
+                direction = mo.group('direction')
+                client = mo.group('client')
+                if interface not in stats:
+                    stats[interface] = {}
+                    stats[interface]['details'] = {}
+                if client not in stats[interface]['details']:
+                    stats[interface]['details'][client]= {}
+                stats[interface]['details'][client][direction] = int(mo.group("bytes"))
+        for interface in stats:
+            up = down = clients = 0
+            for client in stats[interface]['details']:
+                clients = clients + 1
+                up = up + stats[interface]['details'][client].get("up", 0)
+                down = down + stats[interface]['details'][client].get("down", 0)
+            stats[interface]["clients"] = clients
+            stats[interface]["up"] = up
+            stats[interface]["down"] = down
+        return stats
 
 class PersistentBinder(object):
     """Keep track of client bindings and allow persistence to a file.

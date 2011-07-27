@@ -288,20 +288,46 @@ qos:
             answer = json.loads(read.readline())
             self.assertEqual(answer["status"], 0)
             self.assertEqual(answer["value"], value)
+        def stats():
+            write.write("%s\n" % json.dumps(("stats",)))
+            answer = json.loads(read.readline())
+            self.assertEqual(answer["status"], 0)
+            return answer['value']
+        self.assertEqual(stats(),
+                         {'eth1': {'clients': 0, 'details': {}},
+                          'eth2': {'clients': 0, 'details': {}}})
         bind("192.168.1.1", "eth2", "qos3")
         check("192.168.1.1", ["eth2", "qos3"])
+        self.assertEqual(stats(),
+                         {'eth1': {'clients': 0, 'details': {}},
+                          'eth2': {'clients': 1, 'details': {'192.168.1.1': {}}}})
         bind('192.168.1.1', 'eth2', 'qos1')
         check('192.168.1.1', ['eth2', 'qos1'])
         bind('192.168.1.2', 'eth2', 'qos1')
         check('192.168.1.2', ['eth2', 'qos1'])
+        self.assertEqual(stats(),
+                         {'eth1': {'clients': 0, 'details': {}},
+                          'eth2': {'clients': 2, 'details': {'192.168.1.1': {},
+                                                             '192.168.1.2': {}}}})
         bind('192.168.1.3', 'eth1', 'qos1')
         check('192.168.1.3', ['eth1', 'qos1'])
+        self.assertEqual(stats(),
+                         {'eth1': {'clients': 1, 'details': {'192.168.1.3': {}}},
+                          'eth2': {'clients': 2, 'details': {'192.168.1.1': {},
+                                                             '192.168.1.2': {}}}})
         check('192.168.1.4', None)
         unbind('192.168.1.4')
         check('192.168.1.4', None)
         unbind('192.168.1.1')
         check('192.168.1.1', None)
         sock.close()
+
+    def test_stats(self):
+        """Grab stats"""
+        # We won't get much since no real binder is attached
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(('127.0.0.1', 18861))
+        read, write = sock.makefile('rb'), sock.makefile('wb', 0)
 
     def tearDown(self):
         self.service.stop()

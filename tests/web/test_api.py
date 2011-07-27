@@ -231,3 +231,22 @@ qos:
         self.assertEqual(result['value'], dict(ip='192.168.1.16',
                                                interface='eth1',
                                                qos='qos1'))
+
+    def test_stats(self):
+        """Test statistics"""
+        rv = self.app.get("/api/1.0/stats")
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'],
+                         {'eth1': {'clients': 0, 'details': {}},
+                          'eth2': {'clients': 0, 'details': {}}})
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 200)
+        rv = self.app.get("/api/1.0/stats")
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'],
+                         {'eth1': {'clients': 1,
+                                   'details': {'192.168.1.16': {}}},
+                          'eth2': {'clients': 0, 'details': {}}})

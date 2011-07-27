@@ -44,6 +44,15 @@ class RouterRPCService(RPCRequestHandler):
         return interfaces
 
     @expose
+    def stats(self):
+        """Return the stats for each interface.
+
+        :return: dictionary of stats
+        """
+        with self.router_lock:
+            return self.router.stats
+
+    @expose
     def client(self, client):
         """Return client current binding.
 

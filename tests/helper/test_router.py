@@ -11,7 +11,7 @@ import cPickle as pickle
 import zope.interface
 
 from kitero.helper.router import Router, Interface, QoS
-from kitero.helper.interface import IBinder
+from kitero.helper.interface import IBinder, IStatsProvider
 
 class TestQoSBasic(unittest.TestCase):
     def test_build_empty_qos(self):
@@ -403,6 +403,23 @@ class TestRouterObserver(unittest.TestCase):
             self.assertEqual(file(testfile).read(), "bind\nbind\n")
         finally:
             shutil.rmtree(temp)
+
+    def test_stats(self):
+        """Register an observer that also implements IStatsProvider"""
+        class Observer(object):
+            zope.interface.implements(IBinder, IStatsProvider)
+            def notify(self, event, source, **kwargs):
+                """Do nothing"""
+            def stats(self):
+                return {'eth1': {'up': 47, 'down': 255},
+                        'eth2': {'clients': 2, 'details': {'172.14.15.16': {'up': 1, 'down': 2}}}}
+        self.assertEqual(self.router.stats,
+                         {'eth1': {'clients': 0, 'details': {}},
+                          'eth2': {'clients': 0, 'details': {}}})
+        self.router.register(Observer())
+        self.assertEqual(self.router.stats,
+                         {'eth1': {'clients': 0, 'up': 47, 'down': 255, 'details': {}},
+                          'eth2': {'clients': 0, 'details': {}}})
 
 class PickableObserver(object):
     zope.interface.implements(IBinder)

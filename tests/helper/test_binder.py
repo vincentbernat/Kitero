@@ -69,6 +69,19 @@ qos:
         f.write("""#!/bin/sh
 
 echo $(basename $0) "$@" >> "%s"
+case "$(basename $0) $@" in
+   "iptables -t mangle -v -S kitero-ACCOUNTING")
+  cat <<EOF
+-N kitero-ACCOUNTING
+-A kitero-ACCOUNTING -o eth2 -m connmark --mark 0x40000000/0xffe00000 -m comment --comment "up-eth2-172.29.7.14" -c 39219 2079628
+-A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x40000000/0xffe00000 -m comment --comment "down-eth2-172.29.7.14" -c 72867 108647983
+-A kitero-ACCOUNTING -o eth2 -m connmark --mark 0x41000000/0xffe00000 -m comment --comment "up-eth2-172.29.7.15" -c 247 20796
+-A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x41000000/0xffe00000 -m comment --comment "down-eth2-172.29.7.15" -c 867 2015775
+-A kitero-ACCOUNTING -o eth1 -m connmark --mark 0x20000000/0xffe00000 -m comment --comment "up-eth1-172.29.7.19" -c 8888 99999
+-A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x20000000/0xffe00000 -m comment --comment "down-eth1-172.29.7.19" -c 8888 11111
+EOF
+  ;;
+esac
 exit 0
 """ % os.path.join(self.temp, "output.txt"))
         f.close()
@@ -92,6 +105,11 @@ iptables -t mangle -F kitero-PREROUTING
 iptables -t mangle -X kitero-PREROUTING
 iptables -t mangle -N kitero-PREROUTING
 iptables -t mangle -I PREROUTING -j kitero-PREROUTING
+iptables -t mangle -D POSTROUTING -j kitero-ACCOUNTING
+iptables -t mangle -F kitero-ACCOUNTING
+iptables -t mangle -X kitero-ACCOUNTING
+iptables -t mangle -N kitero-ACCOUNTING
+iptables -t mangle -I POSTROUTING -j kitero-ACCOUNTING
 iptables -t mangle -D POSTROUTING -j kitero-POSTROUTING
 iptables -t mangle -F kitero-POSTROUTING
 iptables -t mangle -X kitero-POSTROUTING
@@ -143,6 +161,8 @@ iptables -t mangle -A kitero-PREROUTING -i eth0 -s 192.168.15.2 -j MARK --set-ma
 iptables -t mangle -A kitero-POSTROUTING -o eth1 -s 192.168.15.2 -m mark --mark 0x40000000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
 iptables -t mangle -A kitero-POSTROUTING -o eth1 -m connmark --mark 0x40000000/0xffc00000 -j CLASSIFY --set-class 1:10
 iptables -t mangle -A kitero-POSTROUTING -o eth0 -m connmark --mark 0x40000000/0xffc00000 -j CLASSIFY --set-class 1:10
+iptables -t mangle -A kitero-ACCOUNTING -o eth1 -m connmark --mark 0x40000000/0xffc00000 -m comment --comment up-eth1-192.168.15.2
+iptables -t mangle -A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x40000000/0xffc00000 -m comment --comment down-eth1-192.168.15.2
 """).split("\n"))
 
     @out
@@ -162,6 +182,8 @@ iptables -t mangle -A kitero-PREROUTING -i eth0 -s 192.168.15.5 -j MARK --set-ma
 iptables -t mangle -A kitero-POSTROUTING -o eth2 -s 192.168.15.5 -m mark --mark 0x80400000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
 iptables -t mangle -A kitero-POSTROUTING -o eth2 -m connmark --mark 0x80400000/0xffc00000 -j CLASSIFY --set-class 1:40
 iptables -t mangle -A kitero-POSTROUTING -o eth0 -m connmark --mark 0x80400000/0xffc00000 -j CLASSIFY --set-class 1:40
+iptables -t mangle -A kitero-ACCOUNTING -o eth2 -m connmark --mark 0x80400000/0xffc00000 -m comment --comment up-eth2-192.168.15.5
+iptables -t mangle -A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x80400000/0xffc00000 -m comment --comment down-eth2-192.168.15.5
 """.split("\n"))
 
     @out
@@ -178,6 +200,8 @@ iptables -t mangle -D kitero-PREROUTING -i eth0 -s 192.168.15.2 -j MARK --set-ma
 iptables -t mangle -D kitero-POSTROUTING -o eth2 -s 192.168.15.2 -m mark --mark 0x80000000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
 iptables -t mangle -D kitero-POSTROUTING -o eth2 -m connmark --mark 0x80000000/0xffc00000 -j CLASSIFY --set-class 1:10
 iptables -t mangle -D kitero-POSTROUTING -o eth0 -m connmark --mark 0x80000000/0xffc00000 -j CLASSIFY --set-class 1:10
+iptables -t mangle -D kitero-ACCOUNTING -o eth2 -m connmark --mark 0x80000000/0xffc00000 -m comment --comment up-eth2-192.168.15.2
+iptables -t mangle -D kitero-ACCOUNTING -o eth0 -m connmark --mark 0x80000000/0xffc00000 -m comment --comment down-eth2-192.168.15.2
 """.split("\n"))
 
     @out
@@ -240,7 +264,30 @@ iptables -t mangle -A kitero-PREROUTING -i eth0 -s 192.168.15.5 -j MARK --set-ma
 iptables -t mangle -A kitero-POSTROUTING -o eth2 -s 192.168.15.5 -m mark --mark 0x80400000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
 iptables -t mangle -A kitero-POSTROUTING -o eth2 -m connmark --mark 0x80400000/0xffc00000 -j CLASSIFY --set-class 1:20
 iptables -t mangle -A kitero-POSTROUTING -o eth0 -m connmark --mark 0x80400000/0xffc00000 -j CLASSIFY --set-class 1:20
+iptables -t mangle -A kitero-ACCOUNTING -o eth2 -m connmark --mark 0x80400000/0xffc00000 -m comment --comment up-eth2-192.168.15.5
+iptables -t mangle -A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x80400000/0xffc00000 -m comment --comment down-eth2-192.168.15.5
 """.split("\n"))
+
+    def test_stats(self):
+        """Grab some statistics"""
+        self.router.bind("192.168.15.11", "eth2", "qos1") # For initialization
+        self.assertEqual(self.binder.stats(),
+                         dict(eth1=dict(clients=1,
+                                        up=99999,
+                                        down=11111,
+                                        details={"172.29.7.19":
+                                                     dict(up=99999, down=11111)}),
+                              eth2=dict(clients=2,
+                                        up=(2079628+20796),
+                                        down=(108647983+2015775),
+                                        details={"172.29.7.14":
+                                                     dict(up=2079628, down=108647983),
+                                                 "172.29.7.15":
+                                                     dict(up=20796, down=2015775)})))
+
+    def test_no_stats(self):
+        """Grab stats when not initialized"""
+        self.assertEqual(self.binder.stats(), {})
 
     def tearDown(self):
         os.environ['PATH'] = self.oldpath
