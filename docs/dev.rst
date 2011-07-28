@@ -55,12 +55,12 @@ the :class:`IBinder` interface.
 
 There is currently only two binders:
 ``kitero.helper.binder.LinuxBinder`` and
-``kitero.helper.binder.SaveBinder``.
+``kitero.helper.binder.PersistentBinder``.
 
 .. module:: kitero.helper.binder
 .. autoclass:: LinuxBinder
    :members:
-.. autoclass:: SaveBinder
+.. autoclass:: PersistentBinder
    :members:
 
 Commands
@@ -171,8 +171,8 @@ Kitérő. To setup the lab, just run ``./setup``. You get one router,
 the content of ``setup`` to understand how this works.
 
 Once the lab is up and running, you need to launch Kitérő
-yourself. ``docs/sample.yaml`` should work fine with the lab if you
-remove ``eth4``.
+yourself. ``docs/sample.yaml`` should work fine with the lab. However,
+the *3G* interface has nothing behind.
 
 Documentation
 -------------

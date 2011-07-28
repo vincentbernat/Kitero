@@ -28,6 +28,9 @@ Directive  Default     Comment
 ``port``   ``8187``    Port the web service
                        should listen to. This must
                        be a port greater than 1024.
+                       Use ``iptables`` to redirect
+                       access to port 80 to this
+                       port.
 ``debug``  ``false``   Enable debugging. This should not
                        be done on production.
 ``expire`` ``900``     After how many seconds an inactive

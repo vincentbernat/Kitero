@@ -5,11 +5,15 @@ Main goal
 ---------
 
 Kitérő should be installed on a router featuring several output
-interfaces to access Internet. The user will connect to Kitérő web
+interfaces to access Internet and acting as a default router for a
+batch of users. The user will connect to Kitérő web
 interface to choose her output interface (e.g broadband, ADSL, modem)
 and an associated QoS (e.g 100 MBps, 50 MBps, 10 MBps with additional
 latency). Kitérő will configure the router to let the packets from the
-user flow through the choosen interface and apply the appropriate QoS.
+user flow through the choosen interface and apply the appropriate
+QoS. The user can choose another interface if needed. If the user
+close the web interface, it will be disconnected after some
+configurable timeout.
 
 *Kitérő* means "railroad switch" in Hungarian.
 

@@ -38,6 +38,9 @@ current interface and QoS while the "*Apply*" button will request the
 interface and QoS you selected. You will see a change in the bar at
 the top of the screen when your selection is effective.
 
+It is important to keep the interface open as long as you need the
+connection. If the interface is closed, you will be disconnected.
+
 Troubleshooting
 ---------------
 
