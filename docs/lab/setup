@@ -65,7 +65,8 @@ start_vm() {
 	eth0=tuntap,kitero,, \
 	eth1=daemon,,unix,$PWD/switch.socket \
 	eth2=daemon,,unix,$PWD/switch.socket \
-	eth3=daemon,,unix,$PWD/switch.socket
+	eth3=daemon,,unix,$PWD/switch.socket \
+	eth4=daemon,,unix,$PWD/switch.socket \
     screen -X select 0
     echo "[+] Start web servers VM"
     for i in W1 W2 W3; do
@@ -147,6 +148,7 @@ case $$,$PPID in
 		ip addr add 192.168.1.10/24 dev eth1
 		ip addr add 192.168.2.10/24 dev eth2
 		ip addr add 192.168.3.10/24 dev eth3
+		ip addr add 192.168.4.10/24 dev eth4
 		# Nat to access to W1 and W2, no NAT for W3
 		iptables -t nat -A POSTROUTING \
 		    -s 172.29.7.0/24 -o eth1 -j SNAT --to-source 192.168.1.10
