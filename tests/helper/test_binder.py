@@ -52,7 +52,7 @@ qos:
     description: "My third QoS"
     netem:
       down: delay 500ms 30ms
-      up: delay 10ms 2ms
+      up: delay 10ms 2ms loss 0.01%
   qos4:
     name: "unlimited"
     description: "My fourth QoS"
@@ -134,10 +134,10 @@ ip rule add fwmark 0x80000000/0xc0000000 table eth2
         self.router.bind("192.168.15.2", "eth1", "qos1")
         self.assertEqual(file(self.cur).read().split("\n"), (self.SETUP + 
 """tc class add dev eth1 parent 1: classid 1:10 drr
-tc qdisc add dev eth1 parent 1:10 handle 10: tbf rate 50mbps buffer 1600 limit 3000
+tc qdisc add dev eth1 parent 1:10 handle 10: tbf rate 50mbps buffer 10Mbit latency 1s
 tc qdisc add dev eth1 parent 10:1 handle 11: netem delay 100ms 10ms distribution experimental
 tc class add dev eth0 parent 1: classid 1:10 drr
-tc qdisc add dev eth0 parent 1:10 handle 10: tbf rate 100mbps buffer 1600 limit 3000
+tc qdisc add dev eth0 parent 1:10 handle 10: tbf rate 100mbps buffer 10Mbit latency 1s
 tc qdisc add dev eth0 parent 10:1 handle 11: netem delay 100ms 10ms distribution experimental
 iptables -t mangle -A kitero-PREROUTING -i eth0 -s 192.168.15.2 -j MARK --set-mark 0x40000000/0xffc00000
 iptables -t mangle -A kitero-POSTROUTING -o eth1 -s 192.168.15.2 -m mark --mark 0x40000000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
@@ -155,7 +155,7 @@ iptables -t mangle -A kitero-POSTROUTING -o eth0 -m connmark --mark 0x40000000/0
         self.router.bind("192.168.15.5", "eth2", "qos3")
         self.assertEqual(file(self.cur).read().split("\n"),
 """tc class add dev eth2 parent 1: classid 1:40 drr
-tc qdisc add dev eth2 parent 1:40 handle 40: netem delay 10ms 2ms
+tc qdisc add dev eth2 parent 1:40 handle 40: netem delay 10ms 2ms loss 0.01%
 tc class add dev eth0 parent 1: classid 1:40 drr
 tc qdisc add dev eth0 parent 1:40 handle 40: netem delay 500ms 30ms
 iptables -t mangle -A kitero-PREROUTING -i eth0 -s 192.168.15.5 -j MARK --set-mark 0x80400000/0xffc00000
@@ -232,8 +232,10 @@ iptables -t mangle -D kitero-POSTROUTING -o eth0 -m connmark --mark 0x80000000/0
         os.unlink(self.cur)
         self.router.bind("192.168.15.5", "eth2", "qos4")
         self.assertEqual(file(self.cur).read().split("\n"),
-"""tc class add dev eth2 parent 1: classid 1:20 prio
-tc class add dev eth0 parent 1: classid 1:20 prio
+"""tc class add dev eth2 parent 1: classid 1:20 drr
+tc qdisc add dev eth2 parent 1:20 handle 20: sfq
+tc class add dev eth0 parent 1: classid 1:20 drr
+tc qdisc add dev eth0 parent 1:20 handle 20: sfq
 iptables -t mangle -A kitero-PREROUTING -i eth0 -s 192.168.15.5 -j MARK --set-mark 0x80400000/0xffc00000
 iptables -t mangle -A kitero-POSTROUTING -o eth2 -s 192.168.15.5 -m mark --mark 0x80400000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
 iptables -t mangle -A kitero-POSTROUTING -o eth2 -m connmark --mark 0x80400000/0xffc00000 -j CLASSIFY --set-class 1:20

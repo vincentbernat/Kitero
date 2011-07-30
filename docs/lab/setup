@@ -8,7 +8,7 @@
 # through the server running kitero. Therefore, if the lab is
 # successfully setup, you can connect to the web server using
 # http://192.0.2.1. You can access kitero web interface through
-# http://172.29.7.1:8183.
+# http://172.29.7.1:8187.
 
 # R1 has three connections available. Two of them are using NAT, the
 # last one is not. http://192.0.2.1 is available through each of those
@@ -149,6 +149,9 @@ case $$,$PPID in
 		ip addr add 192.168.2.10/24 dev eth2
 		ip addr add 192.168.3.10/24 dev eth3
 		ip addr add 192.168.4.10/24 dev eth4
+		ip route add default via 192.168.1.1 table eth1
+		ip route add default via 192.168.2.1 table eth2
+		ip route add default via 192.168.3.1 table eth3
 		# Nat to access to W1 and W2, no NAT for W3
 		iptables -t nat -A POSTROUTING \
 		    -s 172.29.7.0/24 -o eth1 -j SNAT --to-source 192.168.1.10

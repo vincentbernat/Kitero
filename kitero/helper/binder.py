@@ -310,32 +310,33 @@ class LinuxBinder(object):
             opts=dict(iface=iface,
                       mark=mark[0],
                       ticket=ticket,
-                      bw=bw[direction], netem=netem[direction],
+                      bw=bw[direction],
                       add=(bind and "add" or "del"))
-            if netem[direction] is not None or bw[direction] is not None:
-                # Create a deficit round robin scheduler
-                Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 drr",
-                             **opts)
-            else:
-                # No bandwidth, no netem, just use prio
-                Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 prio",
-                             **opts)
+            # Create a deficit round robin scheduler
+            Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 drr",
+                         **opts)
             if bw[direction] is not None and bind:
                 # TBF for bandwidth limit...
                 Commands.run(
                     "tc qdisc %(add)s dev %(iface)s parent 1:%(ticket)s0 handle %(ticket)s0:"
-                    "  tbf rate %(bw)s buffer 1600 limit 3000", **opts)
+                    "  tbf rate %(bw)s buffer 10Mbit latency 1s", **opts)
                 if netem[direction] is not None and bind:
                     # ...and netem
                     Commands.run(
                         "tc qdisc %%(add)s dev %%(iface)s parent %%(ticket)s0:1 "
                         "  handle %%(ticket)s1:"
-                        "  netem %s" % netem[direction], **opts)
+                        "  netem %s" % netem[direction].replace("%", "%%"), **opts)
             elif netem[direction] is not None and bind:
                 # Just netem
                 Commands.run(
                     "tc qdisc %%(add)s dev %%(iface)s parent 1:%%(ticket)s0 handle %%(ticket)s0:"
-                    "  netem %s" % netem[direction], **opts)
+                    "  netem %s" % netem[direction].replace("%", "%%"), **opts)
+            elif bind:
+                # No QoS: just use SFQ
+                Commands.run(
+                    "tc qdisc %(add)s dev %(iface)s parent 1:%(ticket)s0"
+                    "  handle %(ticket)s0: sfq",
+                    **opts)
         # iptables to classify
         Commands.run(
             # Mark the incoming packet from the client
