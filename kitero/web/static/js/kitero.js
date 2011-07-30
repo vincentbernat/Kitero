@@ -239,6 +239,16 @@ $(function() {
     // Interfaces
     kitero.view.Interfaces = Backbone.View.extend({
 	el: $("#kitero-conns"),
+	initialize: function() {
+	    _.bindAll(this, "resize");
+	},
+	resize: function() {
+	    // Resize the connections list such that the app is full screen.
+	    var appheight = $("#kitero-header").outerHeight() +
+		$("#kitero-footer").outerHeight() +
+		$("#kitero-main").outerHeight() - this.el.height();
+	    this.el.css("min-height", $("body").height() - appheight);
+	},
 	render: function() {
 	    this.el.children(":not(script)").remove();
 	    this.model.each(function(interface) {
@@ -261,13 +271,16 @@ $(function() {
 	    }, this);
 	    this.el.accordion( { autoHeight: false,
 				 collapsible: true,
-				 selected: false,
-				 fillSpace: true,
+				 fillSpace: false,
+				 clearStyle: true,
 				 icons: {
-		header: 'ui-icon-circle-triangle-e',
-		headerSelected: 'ui-icon-circle-triangle-s'},
+				     header: 'ui-icon-circle-triangle-e',
+				     headerSelected: 'ui-icon-circle-triangle-s'},
                                  header: 'div.kitero-conn',
-                                 active: 1 });
+                                 active: false });
+	    // Handle element size
+	    this.resize();
+	    $(window).resize(this.resize);
 	    return this;
 	}
     });

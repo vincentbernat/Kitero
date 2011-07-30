@@ -1,3 +1,8 @@
+* {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
 html {
     background: url("../images/html_bg.png") repeat-x scroll 0 0 #5F5F5F;
     -webkit-background-size: auto;
@@ -5,6 +10,9 @@ html {
     -o-background-size: auto;
     background-size: auto;
     font-family: sans-serif;
+}
+html, body, #kitero-interface {
+    height: 100%;
 }
 
 /* Loading stuff */
@@ -52,14 +60,12 @@ html.loading {
  **/
 
 #kitero-header {
-    background: url("../images/header_bg.png") no-repeat top center;
     padding-top: 2px;
 }
 
 #kitero-header dl {
     background-color: black;
     padding: 0.2em 1em 0.2em 1em;
-    margin: 0 2px 0 2px;
 }
 #kitero-header dt {
     font-weight: bold;
@@ -72,8 +78,8 @@ html.loading {
     display: inline;
 }
 #kitero-header dd {
-    margin-right: 2em;
-    margin-left: 1em;
+    padding-right: 2em;
+    padding-left: 1em;
 }
 
 /******
@@ -149,11 +155,8 @@ html.loading {
 }
 
 .kitero-actions {
-    margin-top: 2em;
+    padding-top: 2em;
     float: right;
-}
-#kitero-progressbar {
-    margin: 2px;
 }
 .kitero-actions-end {
     clear: both;
@@ -165,7 +168,6 @@ html.loading {
 
 #kitero-footer {
     text-align: right;
-    background: url("../images/footer_bg.png") no-repeat bottom center;
     padding-bottom: 2px;
 }
 
