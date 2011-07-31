@@ -3,7 +3,7 @@ import threading
 import flask
 
 from kitero.web import app
-from kitero.web.decorators import jsonify
+from kitero.web.decorators import jsonify, cache
 from kitero.web.rpc import RPCClient
 
 def status(client):
@@ -101,6 +101,7 @@ def interfaces():
     return interfaces
 
 @app.route("/api/1.0/stats", methods=['GET'])
+@cache(2)
 @jsonify
 def stats():
     """Return statistics for each interface.

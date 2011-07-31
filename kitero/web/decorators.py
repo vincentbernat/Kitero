@@ -23,3 +23,20 @@ def templated(f):
         ctx = f(*args, **kwargs)
         return render_template(template_name, **ctx)
     return decorated_function
+
+def cache(timeout=5):
+    def decorate(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            now = time.time()
+            if f._cache is None:
+                value, last = f(*args, **kwargs), now
+            else:
+                value, last = f._cache
+                if now - last > timeout:
+                    value, last = f(*args, **kwargs), now
+            f._cache = (value, last)
+            return value
+        f._cache = None
+        return decorated_function
+    return decorate
