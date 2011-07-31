@@ -33,17 +33,19 @@
     </div>
 
     <div id="kitero-main">
-      <div id="kitero-logo"><img src="static/kitero.png" width="64" height="64" /></div>
+      <div id="kitero-logo"><img src="static/images/kitero.png" width="64" height="64" /></div>
       <h1>Available interfaces</h1>
 
       <div id="kitero-conns">
 
 	<script id="kitero-conn-template" type="text/x-jquery-tmpl">
-	  <div class="kitero-conn">
+	  <div class="kitero-conn" id="kitero-conn-id-${id}">
 	    <span class="kitero-conn-title">${name}</span>
-	    <span class="kitero-conn-descr">
-	      ${description}
+	    <span class="kitero-conn-stats">
+	      <img title="Statistics for ${name}" alt="Statistics for ${name}" src="static/images/stats.png">
 	    </span>
+	    <span class="kitero-conn-count"></span>
+	    <span class="kitero-conn-descr">${description}</span>
 	  </div>
 	  <div class="kitero-conn-details">
 	    <h3>Available QoS</h3>
@@ -58,6 +60,9 @@
 	</script>
 
       </div>
+
+      <script id="kitero-stats-template" type="text/x-jquery-tmpl">
+      </script>
 
       <div class="kitero-actions">
 	<form>
@@ -87,6 +92,8 @@ yepnope({
            'static/js/underscore-1.1.7.min.js',
            'static/js/json2.js',
            'static/js/backbone-0.5.1.min.js',
+           'static/js/excanvas.min.js',
+           'static/js/jquery.flot-0.7.min.js',
            'static/js/kitero.js'
 	  ]
 });

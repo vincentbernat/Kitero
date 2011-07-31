@@ -101,7 +101,7 @@ def interfaces():
     return interfaces
 
 @app.route("/api/1.0/stats", methods=['GET'])
-@cache(2)
+@cache(1)
 @jsonify
 def stats():
     """Return statistics for each interface.
@@ -109,7 +109,7 @@ def stats():
     The return value exhibits the following format::
 
             {"eth1": {
-               "clients": 5,
+                "clients": 5,
                 "up": 45,
                 "down": 457,
                 "details": {

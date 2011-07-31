@@ -8,7 +8,7 @@ def jsonify(f):
     def decorated_function(*args, **kwargs):
         result = f(*args, **kwargs)
         result = { 'status': 0,
-                   'time': time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                   'time': time.time(),
                    'value': result }
         return Response("%s\n" % json.dumps(result,
                                             indent=None if request.is_xhr else 2),

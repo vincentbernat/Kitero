@@ -108,6 +108,7 @@ clients. It is a pretty simple API.
 URL                       Method          Description
 ========================= =============== =========================================
 ``/api/1.0/current``      **GET**         Get the current settings for the client.
+``/api/1.0/stats``        **GET**         Get current stats for all interfaces.
 ``/api/1.0/interfaces``   **GET**         Get the list of interfaces and associated
                                           QoS settings.
 ``/api/1.0/bind/<X>/<Y>`` **POST**,       Bind the client to the interface ``<X>``
@@ -125,7 +126,7 @@ In case of success, the returned JSON snippet fits the following format::
 
   {
     "status": 0, 
-    "time": "2011-07-24T00:08:05+0200",
+    "time": 1312127745.918855,
     "value": ...
   }
 
@@ -139,7 +140,7 @@ is the following::
 
   {
     "status": 45,
-    "time": "2011-07-24T00:08:05+0200",
+    "time": 1312127745.918855,
   }
 
 ``status`` is always different of 0. The message can contain
@@ -147,6 +148,7 @@ additional properties.
 
 .. module:: kitero.web.api
 .. autofunction:: current
+.. autofunction:: stats
 .. autofunction:: interfaces
 .. autofunction:: bind
 .. autofunction:: unbind

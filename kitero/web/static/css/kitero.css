@@ -127,6 +127,21 @@ html.loading {
     font-style: italic;
     font-size: 90%;
 }
+#kitero-main .kitero-conn-count {
+    font-size: 85%;
+    font-style: normal;
+    margin-right: 0.5em;
+    float: right;
+}
+#kitero-main .kitero-conn-stats {
+    float: right;
+}
+.kitero-stats-view {
+    overflow: hidden !important;
+}
+.kitero-stats-view .tickLabels {
+    font-size: 50% !important;
+}
 
 #kitero-main .kitero-qos {
     list-style-type: none;

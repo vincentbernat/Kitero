@@ -77,6 +77,7 @@ $(function() {
     // models, we use a variable in our namespace. It should be
     // initialized later.
     kitero.settings = null;
+    kitero.stats = null;	// Same for stats
 
     // Model for a QoS setting. Some views may listen to
     // `change:selected` event to update visual status of the QoS. For
@@ -167,10 +168,168 @@ $(function() {
 	    var qos = this.interface() && this.interface().get("qos");
 	    return (qos && qos.get(kitero.settings.get("qos")));
 	}
-    })
+    });
+
+    // Stats about all interfaces
+    kitero.model.Stats = Backbone.Model.extend({
+	url: "api/1.0/stats",
+	initialize: function() {
+	    this.last = {
+		time: null,
+		value: null
+	    };
+	    this.keep = 60;	// Keep 60 values
+	},
+	validate: function(response) {
+	    return (response.status === 0);
+	},
+	parse: function(response) {
+	    var now = {
+		time: response.time,
+		value: response.value,
+	    }
+	    if (_(this.last.time).isNull()) {
+		this.last = now;
+		return {};	// No value available yet, next time
+	    }
+	    var append = function(now, prev, target, delta, keep) {
+		// This function will append attributes from `now'
+		// into attributes of `target', recursively, with
+		// derivation if needed from `prev` assuming `delta`
+		// seconds between `now` and `prev`.
+
+		// 1. Expand existing values
+		var result = _(target)
+		    .map(function(value, key) {
+			if (_(value).isArray()) {
+			    // Leaf
+			    var val;
+			    var result = value;
+			    if (key == "up" || key == "down") {
+				// We need to derivate value
+				if (_.isUndefined(now[key]) ||
+				    _.isUndefined(prev[key]))
+				    val = null;
+				else
+				    val = (now[key] - prev[key])/delta;
+			    } else
+				val = now[key];
+			    // Append the new value
+			    if (_.isUndefined(val)) val = null;
+			    result.unshift(val);
+			    if (result.length > keep) result.pop();
+			    // Only return the result if it is not all null
+			    if (_.all(result, _.isNull)) return null;
+			    return { id: key,
+				     value: result };
+			} else {
+			    var n = append(_.isUndefined(now[key])?{}:now[key],
+					   _.isUndefined(prev[key])?{}:prev[key],
+					   value,
+					   delta, keep);
+			    if (_.isEmpty(n)) return null;
+			    return { id: key,
+				     value: n };
+			}
+		    });
+
+		// 2. Turn back result into a dictionary
+		result = result.reduce(function(result, pack) {
+		    if (!_.isNull(pack))
+			result[pack.id] = pack.value;
+		    return result;
+		}, {});
+
+		// 3. Add new values
+		_(now).each(function(value, key) {
+		    if (!_.isUndefined(result[key])) return;
+		    if (_(value).isNumber()) {
+			if (key == "up" || key == "down") {
+			    if (_.isUndefined(prev[key]))
+				return;
+			    result[key] = [ (now[key] - prev[key])/delta ]
+			    return;
+			}
+			result[key] = [ value ];
+			return;
+		    }
+		    result[key] = append(now[key],
+					 _.isUndefined(prev[key])?{}:prev[key],
+					 {},
+					 delta, keep);
+		});
+
+		// 4. Return
+		return result;
+	    };
+	    var delta = now.time - this.last.time;
+	    if (delta === 0)
+		return this.toJSON();
+	    var result =  append(now.value, this.last.value,
+				 this.toJSON(), delta, this.keep);
+	    this.last = now;
+	    return result;
+	}
+    });
 
     // Views
     // -----
+
+    // Stats window
+    kitero.view.Stats = Backbone.View.extend({
+	className: "kitero-stats-view",
+	initialize: function() {
+	    _.bindAll(this, "update", "render", "close");
+	    kitero.stats.bind("poll", this.update);
+	},
+	close: function() {
+	    
+	},
+	render: function() {
+	    $("#kitero-stats-template")
+		.tmpl({interface: this.model.get("name")})
+		.appendTo(this.el);
+	    $(this.el).dialog({ title: "Statistics for " + this.model.get("name"),
+				close: this.close,
+				resize: this.update,
+				width: 700,
+				height: $("body").height()*3/4 });
+	    this.update();
+	    return this;
+	},
+	close: function() {
+	    kitero.stats.unbind("poll", this.update);
+	    this.remove();
+	},
+	update: function() {
+	    var data = function(iface, what) {
+		var result = (kitero.stats.get(iface) || {})[what] || [];
+		result = _.clone(result);
+		result.reverse();
+		result = _.zip(_.range(result.length), result);
+		return _.reject(result, function(val) { _.isNull(val[1]) });
+	    }
+	    var tickBytes = function(val, axis) {
+		if (Math.abs(val) > 1000000)
+                    return (val / 1000000).toFixed(axis.tickDecimals) + "mB/s";
+		else if (Math.abs(val) > 1000)
+                    return (val / 1000).toFixed(axis.tickDecimals) + "kB/s";
+		else
+                    return val.toFixed(axis.tickDecimals) + "B/s";
+            }
+	    $.plot(this.el, [
+		{ data: data(this.model.id, "up"),
+		  color: "red",
+		  label: "Upload" },
+		{ data: data(this.model.id, "down"),
+		  color: "blue",
+		  label: "Download" }
+	    ], { series: {shadowSize: 0 },
+		 legent: {position: "nw" },
+                 xaxis: { show: false, min: 0, max: kitero.stats.keep },
+                 yaxis: { tickFormatter: tickBytes }});
+	}
+    });
 
     // Current settings header
     kitero.view.Settings = Backbone.View.extend({
@@ -240,7 +399,22 @@ $(function() {
     kitero.view.Interfaces = Backbone.View.extend({
 	el: $("#kitero-conns"),
 	initialize: function() {
-	    _.bindAll(this, "resize");
+	    _.bindAll(this, "resize", "updatecounts");
+	    kitero.stats.bind("change", this.updatecounts);
+	},
+	updatecounts: function() {
+	    // Update counts for all interfaces
+	    this.model.each(function (interface) {
+		var iface = kitero.stats.get(interface.id) || {};
+		var clients = (iface.clients || [0])[0];
+		var span = this.$("#kitero-conn-id-" + interface.id + " .kitero-conn-count");
+		if (clients === 0) {
+		    span.text("");;
+		} else {
+		    if (clients > 1) span.text(clients + " clients")
+		    else span.text(clients + " client");
+		}
+	    }, this);
 	},
 	resize: function() {
 	    // Resize the connections list such that the app is full screen.
@@ -267,6 +441,11 @@ $(function() {
 		    var qos = new kitero.view.QoS({model: qq});
 		    html.find(".kitero-qos").append(qos.render().el);
 		});
+		html.find(".kitero-conn-stats").bind("click", function(event) {
+		    var n = new kitero.view.Stats({model: interface});
+		    n.render();
+		    event.stopPropagation();
+		})
 		html.appendTo(this.el);
 	    }, this);
 	    this.el.accordion( { autoHeight: false,
@@ -297,6 +476,7 @@ $(function() {
 	    // Initialize models
 	    this.settings = kitero.settings = new kitero.model.Settings;
 	    this.interfaces = new kitero.collection.Interfaces;
+	    this.stats = kitero.stats = new kitero.model.Stats;
 	    this.settings.bind("change", this.render);
 	    this.settings.bind("change", this.toggle_buttons);
 	    this.interfaces.bind("reset", this.render);
@@ -369,13 +549,26 @@ $(function() {
 		this.settings.unbind("change", this.render);
 		this.interfaces.unbind("reset", this.render);
 		// Schedule periodic refresh
-		this.scheduled = window.setInterval(function() {
+		this.scheduled = {};
+		this.scheduled.settings = window.setInterval(function() {
 		    kitero.settings.fetch({ error: function() {
 			var that = kitero.app;
 			that.unavailable();
-			window.clearInterval(that.scheduled);
+			window.clearInterval(that.scheduled.settings);
 		    }});
 		}, 5000);
+		this.scheduled.stats = window.setInterval(function() {
+		    kitero.stats.fetch({
+			success: function() {
+			    // Trigger event from here since change
+			    // does not seem to catch deep changes.
+			    kitero.stats.trigger("poll");
+			},
+			error: function() {
+			    // Do nothing
+			    kitero.console.debug("unable to grab stats");
+			}});
+		}, 1100);
 	    }
 	    return this;
 	}
