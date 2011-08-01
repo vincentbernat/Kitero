@@ -186,8 +186,8 @@ $(function() {
 	parse: function(response) {
 	    var now = {
 		time: response.time,
-		value: response.value,
-	    }
+		value: response.value
+	    };
 	    if (_(this.last.time).isNull()) {
 		this.last = now;
 		return {};	// No value available yet, next time
@@ -234,7 +234,7 @@ $(function() {
 		    });
 
 		// 2. Turn back result into a dictionary
-		result = result.reduce(function(result, pack) {
+		result = _.reduce(result, function(result, pack) {
 		    if (!_.isNull(pack))
 			result[pack.id] = pack.value;
 		    return result;
@@ -482,8 +482,8 @@ $(function() {
 	    this.interfaces.bind("reset", this.render);
 	    // Fetch settings and interfaces from the web service
 	    this.unavailable = _.once(this.unavailable);
-	    this.settings.fetch({ error: this.unavailable });
-	    this.interfaces.fetch({ error: this.unavailable });
+	    this.settings.fetch({ error: this.unavailable, cache: false });
+	    this.interfaces.fetch({ error: this.unavailable, cache: false });
 	},
 	// Display a dialog stating the unavailibility of the web service
 	unavailable: function() {
@@ -551,11 +551,14 @@ $(function() {
 		// Schedule periodic refresh
 		this.scheduled = {};
 		this.scheduled.settings = window.setInterval(function() {
-		    kitero.settings.fetch({ error: function() {
-			var that = kitero.app;
-			that.unavailable();
-			window.clearInterval(that.scheduled.settings);
-		    }});
+		    kitero.settings.fetch({
+			error: function() {
+			    var that = kitero.app;
+			    that.unavailable();
+			    window.clearInterval(that.scheduled.settings);
+			},
+			cache: false
+		    });
 		}, 5000);
 		this.scheduled.stats = window.setInterval(function() {
 		    kitero.stats.fetch({
@@ -567,7 +570,9 @@ $(function() {
 			error: function() {
 			    // Do nothing
 			    kitero.console.debug("unable to grab stats");
-			}});
+			},
+			cache: false
+		    });
 		}, 1100);
 	    }
 	    return this;
