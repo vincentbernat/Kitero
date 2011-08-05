@@ -315,6 +315,7 @@ class LinuxBinder(object):
                       mark=mark[0],
                       ticket=ticket,
                       bw=bw[direction],
+                      netem=netem[direction],
                       add=(bind and "add" or "del"))
             # Create a deficit round robin scheduler
             Commands.run("tc class %(add)s dev %(iface)s parent 1: classid 1:%(ticket)s0 drr",
@@ -327,14 +328,14 @@ class LinuxBinder(object):
                 if netem[direction] is not None and bind:
                     # ...and netem
                     Commands.run(
-                        "tc qdisc %%(add)s dev %%(iface)s parent %%(ticket)s0:1 "
-                        "  handle %%(ticket)s1:"
-                        "  netem %s" % netem[direction].replace("%", "%%"), **opts)
+                        "tc qdisc %(add)s dev %(iface)s parent %(ticket)s0:1 "
+                        "  handle %(ticket)s1:"
+                        "  netem %(netem)s", **opts)
             elif netem[direction] is not None and bind:
                 # Just netem
                 Commands.run(
-                    "tc qdisc %%(add)s dev %%(iface)s parent 1:%%(ticket)s0 handle %%(ticket)s0:"
-                    "  netem %s" % netem[direction].replace("%", "%%"), **opts)
+                    "tc qdisc %(add)s dev %(iface)s parent 1:%(ticket)s0 handle %(ticket)s0:"
+                    "  netem %(netem)s", **opts)
             elif bind:
                 # No QoS: just use SFQ
                 Commands.run(
