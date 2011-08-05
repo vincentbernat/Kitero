@@ -39,13 +39,13 @@ qos:
     name: "100M"
     description: "My first QoS"
     bandwidth:
-        down: 100mbps
-        up: 50mbps
+        down: 100mbps buffer 10Mbit latency 1s
+        up: 50mbps buffer 10Mbit latency 1s
     netem: delay 100ms 10ms distribution experimental
   qos2:
     name: "10M"
     description: "My second QoS"
-    bandwidth: 10mbps
+    bandwidth: 10mbps buffer 10Mbit latency 1s
     netem: delay 200ms 10ms
   qos3:
     name: "1M"

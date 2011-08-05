@@ -104,7 +104,8 @@ Attribute        Comment
                  specify one.
 ``description``  Mandatory description of the QoS.
 ``bandwidth``    Optional bandwidth for the QoS. The syntax should
-                 be accepted by ``tc``. For example, ``20mbps`` is a
+                 be accepted by ``tc`` for the ``tbf`` module.
+                 For example, ``20mbit buffer 200kbit latency 1s`` is a
                  valid value. If you want to specify a different
                  bandwidth for upload and download, you can specify a
                  mapping with ``up`` and ``down`` as keys and the

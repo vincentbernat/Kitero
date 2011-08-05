@@ -51,7 +51,8 @@ class Commands(object):
         index = 0
         results = []
         for command in commands:
-            arguments = [x for x in shlex.split(command % substitutions)]
+            command = (command % substitutions).encode('ascii')
+            arguments = shlex.split(command)
             logger.debug("%s: run (%r)" % (arguments[0], " ".join(arguments)))
             try:
                 process = subprocess.Popen(arguments,

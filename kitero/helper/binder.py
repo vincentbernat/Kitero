@@ -324,7 +324,7 @@ class LinuxBinder(object):
                 # TBF for bandwidth limit...
                 Commands.run(
                     "tc qdisc %(add)s dev %(iface)s parent 1:%(ticket)s0 handle %(ticket)s0:"
-                    "  tbf rate %(bw)s buffer 10Mbit latency 1s", **opts)
+                    "  tbf rate %(bw)s", **opts)
                 if netem[direction] is not None and bind:
                     # ...and netem
                     Commands.run(

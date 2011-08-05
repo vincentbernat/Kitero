@@ -38,62 +38,62 @@ router:
     100mbps:
       name: 100Mbps
       description: "Restrict the bandwidth to 100 Mbps in both directions."
-      bandwidth: 100mbit
+      bandwidth: 100mbit buffer 1mbit latency 1s
     10mbps:
       name: 10Mbps
       description: "Restrict the bandwidth to 10 Mbps in both directions."
-      bandwidth: 10mbit
+      bandwidth: 10mbit buffer 100kbit latency 1s
     adsl20m:
       name: "ADSL 20Mbps"
       description: "Restrict download bandwidth 18 Mbps and upload to 1 Mbps. A latency of 20 ms is added to each packets."
       bandwidth:
-        down: 18mbit
-        up: 1mbit
+        down: 18mbit buffer 200kbit latency 1s
+        up: 1mbit buffer 10kbit latency 1s
       netem: delay 20ms 8ms
     adsl8m:
       name: "ADSL 8Mbps"
       description: "Restrict download bandwidth 8 Mbps and upload to 512 kbps. A latency of 30 ms is added to each packets."
       bandwidth:
-        down: 8mbit
-        up: 512kbit
+        down: 8mbit buffer 100kbit latency 1s
+        up: 512kbit buffer 10kbit latency 1s
       netem: delay 30ms 12ms
     adsl1m:
       name: "ADSL 1Mbps"
       description: "Restrict download bandwidth 1 Mbps and upload to 256 kbps. A latency of 40 ms is added to each packets."
       bandwidth:
-        down: 1mbit
-        up: 256kbit
+        down: 1mbit buffer 10kbit latency 1s
+        up: 256kbit buffer 5kbit latency 1s
       netem: delay 40ms 15ms
     adsl512k:
       name: "ADSL 512kbps"
       description: "Restrict download bandwidth 512 kbps and upload to 128 kbps. A latency of 40 ms is added to each packets."
       bandwidth:
-        down: 512kbit
-        up: 128kbit
+        down: 512kbit buffer 10kbit latency 1s
+        up: 128kbit buffer 5kbit latency 1s
       netem: delay 40ms 20ms
     3g:
       name: "3G"
       description: "Emulate an HSPA+ mobile broadband connectivity with download bandwidth 5 Mbps (128 kbps for upload) and latency of 60ms with important jittering."
       bandwidth:
-        down: 5mbit
-        up: 128kbit
+        down: 5mbit buffer 100kbit latency 1s
+        up: 128kbit buffer 5kbit latency 1s
       netem: delay 80ms 50ms loss 1%
     56k:
       name: "56k modem"
       description: "Very low speed connection emulating a 56k modem. 200 ms of latency is added to each packets."
       bandwidth:
-        down: 52kbit
-        up: 30kbit
+        down: 52kbit buffer 5kbit latency 1s
+        up: 30kbit buffer 1kbit latency 1s
       netem: delay 200ms 20ms
     8m:
       name: 8Mbps
       description: "Restrict download bandwidth to 8 Mbps (1 Mbps for upload)."
       bandwidth:
-        down: 8mbit
-        up: 1mbit
+        down: 8mbit buffer 100kbit latency 1s
+        up: 1mbit buffer 10kbit latency 1s
     1m:
       name: 1Mbps
       description: "Restrict download bandwidth to 1 Mbps (200 kbps for upload)."
       bandwidth:
-        down: 1mbit
-        up: 200kbit
+        down: 1mbit buffer 10kbit latency 1s
+        up: 200kbit buffer 5kbit latency 1s
