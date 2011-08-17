@@ -37,7 +37,7 @@ setup(
     # We provide two services
     entry_points = {
         'console_scripts': [
-            'kitero-helper = kitero.helper.service:Service.run',
+            'kitero-helper = kitero.helper.service:_run',
             'kitero-web = kitero.web.serve:_run',
             ]
         },

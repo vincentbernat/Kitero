@@ -215,6 +215,9 @@ class Service(object):
             sys.exit(1)
         sys.exit(0)
 
-if __name__ == "__main__": # pragma: no cover
+def _run(): # pragma: no cover
     from kitero.helper.binder import LinuxBinder
     Service.run(binder=LinuxBinder())
+
+if __name__ == "__main__": # pragma: no cover
+    _run()
