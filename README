@@ -10,3 +10,5 @@ an API to let a user chooses her interface and QoS.
 The user will point her browser to the IP address of the router and
 will be presented a simple interface allowing to choose the interface
 that should be used to route her packets and the associated QoS.
+
+The documentation can be built with `python setup.py build_sphinx`.
