@@ -423,7 +423,7 @@ class LinuxBinder(object):
         output = Commands.run("iptables -t mangle -v -S %(accounting)s",
                               **self.config)
         for line in output.split("\n"):
-            mo = self.STATSRE.match(line)
+            mo = self.STATSRE.match(line.strip())
             if mo:
                 interface = mo.group('interface')
                 direction = mo.group('direction')
