@@ -489,7 +489,7 @@ $(function() {
 	unavailable: function() {
 	    var dialog = $('<div></div>')
 		.html("<img style='float: left; padding-right: 0.7em;' \
-                        src='static/kitero.png' width='32' height='32' /> \
+                        src='static/images/kitero.png' width='32' height='32' /> \
                       Kitérő web service is currently unavailable. You may try to \
 		      reload the application in case this is a transient \
 		      problem. Otherwise, please contact the administrator.")
