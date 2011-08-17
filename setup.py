@@ -27,6 +27,12 @@ setup(
 
     # List of provided packages
     packages = find_packages(exclude=("tests",)),
+    package_data = { 'kitero.web': [ 'templates/*.html',
+                                     'static/css/*.css',
+                                     'static/js/*.js',
+                                     'static/images/*.jpg',
+                                     'static/images/*.png',
+                                     ] },
 
     # We provide two services
     entry_points = {
