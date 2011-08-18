@@ -6,11 +6,18 @@ def run(config={}):
 
     :param config: configuration of the application
     """ 
-
-    from kitero.web import app
-    configure(app, config)
+    app = application(config)
     app.run(host=app.config['LISTEN'],
             port=app.config['PORT'])
+
+def application(config={}):
+    """Return Kitero application.
+
+    This function could be the entry point for WSGI.
+    """
+    from kitero.web import app
+    configure(app, config)
+    return app
 
 def configure(app, config={}):
     # Load configuration
