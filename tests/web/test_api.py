@@ -12,7 +12,7 @@ from kitero.web import app
 from kitero.web.rpc import RPCClient
 from kitero.web.serve import configure
 from kitero.helper.router import Router
-from kitero.helper.service import Service
+from kitero.helper.serve import Service
 
 class TestApi(unittest.TestCase):
     def setUp(self):

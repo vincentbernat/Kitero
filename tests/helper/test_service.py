@@ -15,7 +15,7 @@ import socket
 import json
 import zope.interface
 
-from kitero.helper.service import Service
+from kitero.helper.serve import Service
 from kitero.helper.router import Router, Interface, QoS
 from kitero.helper.interface import IBinder
 
