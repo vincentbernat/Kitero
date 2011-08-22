@@ -407,7 +407,8 @@ $(function() {
 	    this.model.each(function (interface) {
 		var iface = kitero.stats.get(interface.id) || {};
 		var clients = (iface.clients || [0])[0];
-		var span = this.$("#kitero-conn-id-" + interface.id + " .kitero-conn-count");
+		var id = interface.id.replace(".", "-"); // VLAN ID
+		var span = this.$("#kitero-conn-id-" + id + " .kitero-conn-count");
 		if (clients === 0) {
 		    span.text("");;
 		} else {
@@ -432,7 +433,9 @@ $(function() {
 		// this. Therefore, the view for interfaces also
 		// happens to be the view for invidual interfaces.
 		kitero.console.debug("Render interface %s", interface.get("name"), interface);
-		var html = $("#kitero-conn-template").tmpl(interface.toJSON());
+		var values = interface.toJSON();
+		values.id = values.id.replace(".", "-");
+		var html = $("#kitero-conn-template").tmpl(values);
 		if (!interface.get("qos")) {
 		    kitero.console.warning("No QoS for this interface:", interface);
 		    return;
