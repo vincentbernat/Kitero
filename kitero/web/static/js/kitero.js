@@ -485,17 +485,13 @@ $(function() {
 	    this.interfaces.fetch({ error: this.unavailable, cache: false });
 	},
 	// Display a dialog stating the unavailibility of the web service
-	unavailable: function() {
-	    var dialog = $('<div></div>')
-		.html("<img style='float: left; padding-right: 0.7em;' \
-                        src='static/images/kitero.png' width='32' height='32' /> \
-                      Kitérő web service is currently unavailable. You may try to \
-		      reload the application in case this is a transient \
-		      problem. Otherwise, please contact the administrator.")
+	unavailable: function(what, error) {
+	    var dialog = $("#kitero-unavailable")
+		.tmpl({error: (error && error.statusText) || "unknown error"})
 		.dialog({ modal: true,
 			  buttons: { "Reload": function() {window.location.reload();} },
 			  close: function() {window.location.reload();},
-			  title: "Kitérő web service unavailable",
+			  title: "Kitérő web service unexpected situation",
 			  dialogClass: "alert"
 			});
 	},
@@ -530,9 +526,9 @@ $(function() {
 		this.scheduled = {};
 		this.scheduled.settings = window.setInterval(function() {
 		    kitero.settings.fetch({
-			error: function() {
+			error: function(what, error) {
 			    var that = kitero.app;
-			    that.unavailable();
+			    that.unavailable(what, error);
 			    window.clearInterval(that.scheduled.settings);
 			},
 			cache: false
