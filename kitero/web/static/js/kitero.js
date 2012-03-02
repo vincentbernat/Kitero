@@ -537,7 +537,7 @@ $(function() {
 			},
 			cache: false
 		    });
-		}, 5000);
+		}, 30100);
 		this.scheduled.stats = window.setInterval(function() {
 		    kitero.stats.fetch({
 			success: function() {
@@ -551,7 +551,7 @@ $(function() {
 			},
 			cache: false
 		    });
-		}, 1100);
+		}, 5000);
 	    }
 	    return this;
 	}
