@@ -26,8 +26,10 @@
 # populate them. For example, with `ip route add default via
 # 192.168.2.1 table eth2`
 
-PROGNAME="$0"
+PROGNAME=$(readlink -f $0)
 PROGARGS="$@"
+ROOT=$(readlink -f ${ROOT:-/})
+LINUX=$(which linux)
 
 check_dependencies() {
     for dep in screen sudo tunctl ip uml_switch linux bash nginx; do
@@ -43,6 +45,7 @@ setup_screen() {
 	exec screen -ln -S kitero-lab -c /dev/null -t main "$0" "$@"
     sleep 1
     screen -X caption always "%{= wk}%-w%{= BW}%n %t%{-}%+w %-="
+    screen -X zombie cr
 }
 
 setup_interfaces() {
@@ -53,29 +56,22 @@ setup_interfaces() {
     sudo ip route add 192.0.2.1/32 via 172.29.7.1 dev kitero
     echo "[+] Setup uml_switch"
     uml_switch -unix switch.socket &
-    echo $! > uml_switch.pid
+    echo $! > "$TMP/uml_switch.pid"
     sleep 1
 }
 
 start_vm() {
-    echo "[+] Start kitero VM"
-    screen -t R1 \
-	linux uts=R1 mem=64M \
-	root=/dev/root con=null ssl0=fd:0,fd:1 rootfstype=hostfs init=$PWD/setup \
-	eth0=tuntap,kitero,, \
-	eth1=daemon,,unix,$PWD/switch.socket \
-	eth2=daemon,,unix,$PWD/switch.socket \
-	eth3=daemon,,unix,$PWD/switch.socket \
-	eth4=daemon,,unix,$PWD/switch.socket \
+    echo "[+] Start VM $1"
+    name="$1"
+    shift
+    screen -t $name \
+        start-stop-daemon --make-pidfile --pidfile "$TMP/vm-$name.pid" \
+        --start --startas $LINUX -- \
+        uts=$name \
+        root=/dev/root rootfstype=hostfs rootflags=$ROOT myroot=$ROOT init="$PROGNAME" \
+        "$@"
     screen -X select 0
-    echo "[+] Start web servers VM"
-    for i in W1 W2 W3; do
-	screen -t $i \
-	    linux uts=$i \
-	    root=/dev/root con=null ssl0=fd:0,fd:1 rootfstype=hostfs init=$PWD/setup \
-	    eth0=daemon,,unix,$PWD/switch.socket
-	screen -X select 0
-    done
+    sleep 0.3
 }
 
 display_help() {
@@ -92,26 +88,40 @@ read a
 }
 
 cleanup() {
-    killall -q -u $(whoami) linux
-    kill $(cat uml_switch.pid)
-    rm uml_switch.pid switch.socket
+    for pid in $TMP/*.pid; do
+        kill $(cat $pid)
+    done
+    sleep 0.5
+    rm -rf $TMP # sh does not seem to handle "trap EXIT"
     tunctl -d kitero
+    screen -X quit
 }
 
-case $$,$PPID in
-    1,*|*,1)
+case $$ in
+    1)
 	# Inside a VM
-	echo "[+] Set hostname"
-	hostname -b ${uts}
-	echo "[+] Set path"
-	export TERM=xterm
-	export PATH=/usr/local/bin:/usr/bin:/bin:/sbin:/usr/local/sbin:/usr/sbin
+        STATE=${STATE:-1}
 
-        # A getty allow to setup a proper console
-	[ x"$GETTY" = x"1" ] || {
-	    export GETTY=1
-	    getty -n -l $0 38400 /dev/ttyS0
-	}
+        case $STATE in
+            1)
+		echo "[+] Set hostname"
+		hostname -b ${uts}
+		echo "[+] Set path"
+		export TERM=xterm
+		export PATH=/usr/local/bin:/usr/bin:/bin:/sbin:/usr/local/sbin:/usr/sbin
+
+                # A getty allow to setup a proper console
+		export STATE=2
+                exec setsid python -c '
+import os, sys
+os.close(0)
+os.open("/dev/tty0", os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK, 0)
+os.dup2(0, 1)
+os.dup2(0, 2)
+# os.tcsetpgrp(0, 1)
+os.execv(sys.argv[1], [sys.argv[1]])' "$PROGNAME"
+                ;;
+	esac
 
 	# FS
 	echo "[+] Set filesystems"
@@ -119,7 +129,12 @@ case $$,$PPID in
 	mount -t sysfs sysfs /sys
 	mount -t tmpfs tmpfs /dev -o rw && {
 	    cd /dev
-	    MAKEDEV null
+            if [ -f $(dirname "$PROGNAME")/dev.tar ]; then
+                tar xf $(dirname "$PROGNAME")/dev.tar
+            else
+		# consoleonly creates /dev/tty0
+                MAKEDEV null consoleonly
+            fi
 	}
 	mount -t tmpfs tmpfs /var/run -o rw,nosuid,nodev
 	mount -t tmpfs tmpfs /var/tmp -o rw,nosuid,nodev
@@ -137,8 +152,10 @@ case $$,$PPID in
 	echo "[+] Start syslog"
 	rsyslogd
 
-	cd $(dirname $0)
-
+        cd $(dirname "$PROGNAME")
+        [ -f dev.tar ] || {
+            tar -C /dev -cf dev.tar.$uts . && mv dev.tar.$uts dev.tar
+        }
 
 	echo "[+] Setup VM"
 	case ${uts} in
@@ -158,7 +175,11 @@ case $$,$PPID in
 		iptables -t nat -A POSTROUTING \
 		    -s 172.29.7.0/24 -o eth2 -j SNAT --to-source 192.168.2.10
 
-		echo "[+] Start kitero yourself if needed"
+		echo "[+] Start kitero yourself if needed:"
+		echo "      . ~virtualenv/kitero/bin/activate"
+		echo "      cd ../.."
+		echo "      python -m kitero.web.serve docs/sample.yaml &"
+		echo "      python -m kitero.helper.service docs/sample.yaml &"
 		;;
 	    W1|W2|W3)
 		ip addr add 192.168.${uts#W}.1/24 dev eth0
@@ -182,12 +203,22 @@ case $$,$PPID in
 	;;
     *)
 	# Setup the lab
+        TMP=$(mktemp -d)
+        trap "rm -rf $TMP" EXIT
 	check_dependencies
 	setup_screen
 	setup_interfaces
-	start_vm
+	start_vm R1 mem=64M \
+	    eth0=tuntap,kitero,, \
+	    eth1=daemon,,unix,$PWD/switch.socket \
+	    eth2=daemon,,unix,$PWD/switch.socket \
+	    eth3=daemon,,unix,$PWD/switch.socket \
+	    eth4=daemon,,unix,$PWD/switch.socket
+	for i in W1 W2 W3; do
+	    start_vm $i mem=48M \
+		eth0=daemon,,unix,$PWD/switch.socket
+	done
 	display_help
 	cleanup
-	screen -X quit
 	;;
 esac
