@@ -451,6 +451,7 @@ $(function() {
 		})
 		html.appendTo(this.el);
 	    }, this);
+	    var that = this;
 	    this.el.accordion( { autoHeight: false,
 				 collapsible: true,
 				 fillSpace: false,
@@ -459,7 +460,7 @@ $(function() {
 				     header: 'ui-icon-circle-triangle-e',
 				     headerSelected: 'ui-icon-circle-triangle-s'},
                                  header: 'div.kitero-conn',
-                                 active: false });
+                                 active: false});
 	    // Handle element size
 	    this.resize();
 	    $(window).resize(this.resize);
@@ -469,19 +470,14 @@ $(function() {
 
     // Our main application
     kitero.view.Application = Backbone.View.extend({
-	events: {
-	    'click #apply'  : "apply_changes",
-	    'click #cancel' : "reset_changes"
-	},
 	initialize: function() {
 	    kitero.console.info("Starting Kitérő.")
-	    _.bindAll(this, 'render', 'toggle_buttons');
+	    _.bindAll(this, 'render');
 	    // Initialize models
 	    this.settings = kitero.settings = new kitero.model.Settings;
 	    this.interfaces = new kitero.collection.Interfaces;
 	    this.stats = kitero.stats = new kitero.model.Stats;
 	    this.settings.bind("change", this.render);
-	    this.settings.bind("change", this.toggle_buttons);
 	    this.interfaces.bind("reset", this.render);
 	    // Fetch settings and interfaces from the web service
 	    this.unavailable = _.once(this.unavailable);
@@ -503,30 +499,13 @@ $(function() {
 			  dialogClass: "alert"
 			});
 	},
-	// Enable or disable OK/Cancel buttons
-	toggle_buttons: function() {
-	    this.$('#cancel,#apply').button(
-		(!this.saving && this.settings.needs_apply())?"enable":"disable");
-	},
 	// Apply changes
 	apply_changes: function(event) {
-	    event.preventDefault();
-	    // Toggle "saving" flag
-	    this.saving = true;
-	    this.toggle_buttons();
-	    var view = this;
-	    // To be done: handle error case
 	    kitero.settings.save(null,
-				 { error: this.unavailable,
-				   success: function() {
-				     view.saving = false;
-				     view.toggle_buttons(); // Useless, but we don't know
-				     }
-				 });
+				 { error: this.unavailable });
 	},
-	// Reset changes
+	// Reset changes, not used
 	reset_changes: function(event) {
-	    event.preventDefault();
 	    kitero.settings.reset();
 	},
 	render: function() {
@@ -540,17 +519,13 @@ $(function() {
 		// current settings through `kitero.settings`.
 		this.settingsView = new kitero.view.Settings({model: this.interfaces});
 		this.interfacesView = new kitero.view.Interfaces({model: this.interfaces});
-		// Initialize OK and cancel buttons
-		this.$('#cancel').button({icons: {primary: 'ui-icon-circle-close'},
-					  disabled: true});
-		this.$('#apply').button({icons: {primary: 'ui-icon-circle-check'},
-					 disabled: true});
 		$("html").removeClass("loading");
 		this.settingsView.render();
 		this.interfacesView.render();
 		// No need to redisplay the interface once it is displayed
 		this.settings.unbind("change", this.render);
 		this.interfaces.unbind("reset", this.render);
+		this.settings.bind("change:s_qos", this.apply_changes);
 		// Schedule periodic refresh
 		this.scheduled = {};
 		this.scheduled.settings = window.setInterval(function() {

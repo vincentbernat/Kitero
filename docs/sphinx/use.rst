@@ -31,12 +31,9 @@ interface and a QoS. It is up to the administrator to add a "No QoS
 applied" option.
 
 Once you select an interface and QoS different of the current one
-(which is displayed in the bar at the top of the screen), you can
-either click on "*Cancel*" or "*Apply*" buttons at the bottom of the
-screen. The "*Cancel*" button will just reset the selection to the
-current interface and QoS while the "*Apply*" button will request the
-interface and QoS you selected. You will see a change in the bar at
-the top of the screen when your selection is effective.
+(which is displayed in the bar at the top of the screen), the changes
+are applied right away. You will see a change in the bar at the top of
+the screen when your selection is effective.
 
 It is important to keep the interface open as long as you need the
 connection. If the interface is closed, you will be disconnected.
