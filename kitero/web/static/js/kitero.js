@@ -376,6 +376,7 @@ $(function() {
 	    kitero.console.debug("Select interface %s and QoS %s",
 				 target.s_interface, target.s_qos);
 	    kitero.settings.set(target);
+	    kitero.settings.trigger("change:selected");
 	},
 	update_selected: function() {
 	    $(this.el).toggleClass("kitero-qos-selected", this.model.get("selected"));
@@ -479,7 +480,7 @@ $(function() {
 	// Display a dialog stating the unavailibility of the web service
 	unavailable: function(what, error) {
 	    var dialog = $("#kitero-unavailable")
-		.tmpl({error: (error && error.statusText) || "unknown error"})
+		.tmpl({error: (error && (error.status + " " + error.statusText)) || "unknown error"})
 		.dialog({ modal: true,
 			  buttons: { "Reload": function() {window.location.reload();} },
 			  close: function() {window.location.reload();},
@@ -513,7 +514,7 @@ $(function() {
 		// No need to redisplay the interface once it is displayed
 		this.settings.unbind("change", this.render);
 		this.interfaces.unbind("reset", this.render);
-		this.settings.bind("change:s_qos", this.apply_changes);
+		this.settings.bind("change:selected", this.apply_changes);
 		// Schedule periodic refresh
 		this.scheduled = {};
 		this.scheduled.settings = window.setInterval(function() {
