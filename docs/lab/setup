@@ -179,7 +179,7 @@ os.execv(sys.argv[1], [sys.argv[1]])' "$PROGNAME"
 		echo "      . ~virtualenv/kitero/bin/activate"
 		echo "      cd ../.."
 		echo "      python -m kitero.web.serve docs/sample.yaml &"
-		echo "      python -m kitero.helper.service docs/sample.yaml &"
+		echo "      python -m kitero.helper.serve docs/sample.yaml &"
 		;;
 	    W1|W2|W3)
 		ip addr add 192.168.${uts#W}.1/24 dev eth0
