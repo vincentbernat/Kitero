@@ -42,9 +42,6 @@ $(function() {
 	    s_qos       : null	// selected qos (client side)
 	},
 	url: "api/1.0/current",
-	validate: function(response) {
-	    return (response.status === 0);
-	},
 	parse: function(response) {
 	    // Complete the answer with currently selected values
 	    _.defaults(response.value,
@@ -60,6 +57,7 @@ $(function() {
 	save: function(attr, options) {
 	    // Override save to use our URL scheme.
 	    // PUT or POST is not important. Both works.
+	    kitero.console.log(options);
 	    options || (options = {});
 	    options.url || (options.url = this.url + "/../bind/" + 
 			    encodeURIComponent(this.get("s_interface")) + "/" +
@@ -136,9 +134,6 @@ $(function() {
     kitero.collection.Interfaces = Backbone.Collection.extend({
 	model: kitero.model.Interface,
 	url: "api/1.0/interfaces",
-	validate: function(response) {
-	    return (response.status === 0);
-	},
 	parse: function(response) {
 	    // Transform the answer into an array.
 	    var answer = _.map(response.value, function(interface, eth) {
@@ -179,9 +174,6 @@ $(function() {
 		value: null
 	    };
 	    this.keep = 60;	// Keep 60 values
-	},
-	validate: function(response) {
-	    return (response.status === 0);
 	},
 	parse: function(response) {
 	    var now = {
@@ -472,7 +464,7 @@ $(function() {
     kitero.view.Application = Backbone.View.extend({
 	initialize: function() {
 	    kitero.console.info("Starting Kitérő.")
-	    _.bindAll(this, 'render');
+	    _.bindAll(this, 'render', 'apply_changes');
 	    // Initialize models
 	    this.settings = kitero.settings = new kitero.model.Settings;
 	    this.interfaces = new kitero.collection.Interfaces;
