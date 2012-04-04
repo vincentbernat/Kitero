@@ -7,6 +7,7 @@ import flask
 import yaml
 import json
 import time
+import base64
 
 from kitero.web import app
 from kitero.web.rpc import RPCClient
@@ -28,6 +29,9 @@ interfaces:
   eth2:
     name: WAN
     description: "My second interface"
+    password: 1234
+    qos:
+      - qos1
 qos:
   qos1:
     name: 100M
@@ -68,7 +72,12 @@ qos:
         result = json.loads(rv.data)
         self.assertEqual(result['status'], 0)
         self.assertEqual(result['value'],
-                         {'eth2': {'qos': {},
+                         {'eth2': {'qos':
+                                   {'qos1':
+                                        {'netem': 'delay 100ms 10ms distribution experimental',
+                                         'bandwidth': '100mbps',
+                                         'name': '100M',
+                                         'description': 'My first QoS'}},
                                    'name': 'WAN',
                                    'description': 'My second interface'},
                           'eth1': {'qos': 
@@ -156,6 +165,33 @@ qos:
         rv = self.app.put("/api/1.0/bind/eth3/qos1",
                           environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
         self.assertEqual(rv.status_code, 500)
+
+    def test_protected_bind(self):
+        """Try to bind to a protected interface"""
+        rv = self.app.put("/api/1.0/bind/eth2/qos1",
+                          environ_overrides={"REMOTE_ADDR": "192.168.1.16"})
+        self.assertEqual(rv.status_code, 401)
+        rv = self.app.open("/api/1.0/bind/eth2/qos1",
+                           method='PUT',
+                           headers=dict(Authorization=
+                                        'Basic ' +
+                                        base64.b64encode("1234:nothing")),
+                           environ_overrides={"REMOTE_ADDR": "192.168.1.17"})
+        self.assertEqual(rv.status_code, 200)
+        rv = self.app.open("/api/1.0/bind/eth2/qos1",
+                           method='PUT',
+                           headers=dict(Authorization=
+                                        'Basic ' +
+                                        base64.b64encode("bad:nothing")),
+                           environ_overrides={"REMOTE_ADDR": "192.168.1.18"})
+        self.assertEqual(rv.status_code, 401)
+        rv = self.app.open("/api/1.0/bind/eth1/qos1",
+                           method='PUT',
+                           headers=dict(Authorization=
+                                        'Basic ' +
+                                        base64.b64encode("bad:nothing")),
+                           environ_overrides={"REMOTE_ADDR": "192.168.1.19"})
+        self.assertEqual(rv.status_code, 200)
 
     def test_unbind(self):
         """Try to unbind a client"""

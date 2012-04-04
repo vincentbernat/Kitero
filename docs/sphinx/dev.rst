@@ -122,6 +122,14 @@ data. On errors, a 404 error or a 500 error may be returned. In this
 case, the result may or may not be encoded in JSON (actually it is not
 encoded in JSON).
 
+The bind API can return 401 if the requested interface is password
+protected and no password has been provided or the provided password
+is incorrect. To provide a password, provide it as the username for
+the request. For example, to provide ``42424`` as a password, the
+request should be
+``http://42424:42424@localhost/api/1.0/bind/eth1/qos1``. Only the user
+part is used! The password part is ignored.
+
 In case of success, the returned JSON snippet fits the following format::
 
   {

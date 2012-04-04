@@ -4,7 +4,7 @@ import flask
 
 from kitero.web import app
 from kitero.web.decorators import jsonify, cache
-from kitero.web.rpc import RPCClient
+from kitero.web.rpc import RPCClient, RPCException
 
 def status(client):
     """Return the status of the given client"""
@@ -128,13 +128,24 @@ def stats():
 def bind(interface, qos):
     """Allow to set the current interface for the client.
 
-    The result of this function is the same as :func:`current`.
+    The result of this function is the same as :func:`current`. The
+    client may have to provide a password. If a password is requested,
+    we raise a 401 HTTP error. The password should be provided as a
+    username, not as the password. The password part is ignored.
 
     :param interface: Output interface requested
     :param qos: QoS settings requested
     """
     client = flask.request.remote_addr
-    RPCClient.call("bind_client", client, interface, qos)
+    auth   = flask.request.authorization
+    password = auth and auth.username or None
+    try:
+        RPCClient.call("bind_client", client, interface, qos, password)
+    except RPCException as e:
+        if e.exception == "AssertionError":
+            # The password is incorrect or not provided
+            flask.abort(401)
+        raise
     ping.refresh(client)
     return status(client)
 
