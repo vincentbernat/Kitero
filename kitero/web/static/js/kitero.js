@@ -3,6 +3,35 @@ var kitero = kitero || {};
 
 $(function() {
 
+    // Helper function. Stolen from:
+    //  http://phpjs.org/functions/base64_encode:358
+    function base64_encode (data) {
+	var b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+	var o1, o2, o3, h1, h2, h3, h4, bits, i = 0,
+        ac = 0,
+        enc = "",
+        tmp_arr = [];
+	if (!data) {
+            return data;
+	}
+
+	do {
+            o1 = data.charCodeAt(i++);
+            o2 = data.charCodeAt(i++);
+            o3 = data.charCodeAt(i++);
+            bits = o1 << 16 | o2 << 8 | o3;
+            h1 = bits >> 18 & 0x3f;
+	    h2 = bits >> 12 & 0x3f;
+            h3 = bits >> 6 & 0x3f;
+            h4 = bits & 0x3f;
+	    tmp_arr[ac++] = b64.charAt(h1) + b64.charAt(h2) + b64.charAt(h3) + b64.charAt(h4);
+	} while (i < data.length);
+
+	enc = tmp_arr.join('');
+        var r = data.length % 3;
+	return (r ? enc.slice(0, r - 3) : enc) + '==='.slice(r || 3);
+    }
+
     // Proxy object for `console`.
     kitero.console = function() {
 	var names = ["log", "debug", "info", "warn", "error", "trace"];
@@ -489,9 +518,36 @@ $(function() {
 			});
 	},
 	// Apply changes
-	apply_changes: function(event) {
-	    kitero.settings.save(null,
-				 { error: this.unavailable });
+	apply_changes: function(event, password) {
+	    var that = this;
+	    var options = { error: function(what, error) {
+		if (error && error.status === 401) {
+		    var dialog = $("#kitero-password-dialog").tmpl({});
+		    dialog.find("form").submit(function(event) {
+			event.preventDefault();
+			return false;
+		    });
+		    dialog.dialog({ modal: true,
+				    title: "Password needed",
+				    buttons: {
+					Cancel: function() {
+					    // Just close, no change
+					    $(this).dialog("close");
+					},
+					OK: function() {
+					    // Resubmit with the appropriate credentials
+					    $(this).dialog("close");
+					    that.apply_changes(event, $(this).find("input").val());
+					}
+				    }});
+		} else that.unavailable(what, error);
+	    }};
+	    if (password !== undefined)
+		options.beforeSend = function(req) {
+		    req.setRequestHeader('Authorization',
+					 "Basic " + base64_encode(password + ":" + password));
+		};
+	    kitero.settings.save(null, options);
 	},
 	// Reset changes, not used
 	reset_changes: function(event) {

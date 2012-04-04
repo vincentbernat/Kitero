@@ -143,6 +143,10 @@ html.loading {
     font-size: 50% !important;
 }
 
+.ui-dialog form {
+    margin-top: 0.5em;
+}
+
 #kitero-main .kitero-qos {
     list-style-type: none;
 }
