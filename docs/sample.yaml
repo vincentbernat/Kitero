@@ -31,6 +31,7 @@ router:
       description: "HSPA+ mobile broadband access."
       qos:
         - noqos
+      password: 48752
   qos:
     noqos:
       name: "No QoS"

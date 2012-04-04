@@ -95,6 +95,19 @@ class TestInterfaceBasic(unittest.TestCase):
         i = Interface("eth0", "My first interface",
                       {'qos1': QoS("100M", ""), 'qos2': QoS("10M", "")})
         self.assertEqual(i, pickle.loads(pickle.dumps(i)))
+
+    def test_password(self):
+        """Password protection"""
+        i1 = Interface("eth0", "My first interface",
+                       {}, "12457")
+        i2 = Interface("eth0", "My first interface",
+                       {})
+        self.assertEqual(i1.check_password("12457"), True)
+        self.assertEqual(i1.check_password(12457), True)
+        self.assertEqual(i1.check_password(None), False)
+        self.assertEqual(i1.check_password("1245711"), False)
+        self.assertEqual(i2.check_password(None), True)
+        self.assertEqual(i2.check_password("1245711"), True)
         
 class TestRouterBasic(unittest.TestCase):
     def test_empty_router(self):
@@ -223,6 +236,37 @@ class TestRouterBasic(unittest.TestCase):
         self.assertEqual(r, pickle.loads(pickle.dumps(r)))
         self.assertEqual(r.clients, pickle.loads(pickle.dumps(r)).clients)
 
+    def test_bind_with_password(self):
+        """Bind a password protected interface"""
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2},
+                       password="1234")
+        i2 = Interface("WAN", "My third interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth1': i1, 'eth2': i2})
+        r.bind("192.168.15.2", "eth1", "qos2", password="1234")
+        r.bind("192.168.15.3", "eth2", "qos1")
+        r.bind("192.168.15.4", "eth1", "qos2", password=1234)
+        r.bind("192.168.15.5", "eth2", "qos1", password=4574)
+        self.assertEqual(r.clients["192.168.15.2"], ('eth1', 'qos2'))
+        self.assertEqual(r.clients["192.168.15.3"], ('eth2', 'qos1'))
+        self.assertEqual(r.clients["192.168.15.4"], ('eth1', 'qos2'))
+        self.assertEqual(r.clients["192.168.15.5"], ('eth2', 'qos1'))
+
+    def test_bind_incorrect_password(self):
+        """Bind with an incorrect password"""
+        q1 = QoS("100M", "My first QoS")
+        q2 = QoS("10M", "My second QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2},
+                       password="1234")
+        r = Router("eth0", interfaces={'eth1': i1})
+        with self.assertRaises(AssertionError):
+            r.bind("192.168.15.2", "eth1", "qos2")
+        with self.assertRaises(AssertionError):
+            r.bind("192.168.15.2", "eth1", "qos2", "4512")
+        with self.assertRaises(KeyError):
+            r.clients["192.168.15.2"]
+
 class TestRouterLoad(unittest.TestCase):
     def test_load(self):
         """Load router from YAML representation"""
@@ -241,6 +285,7 @@ interfaces:
     qos:
       - qos1
       - qos3
+    password: 1234
 qos:
   qos1:
     name: "100M"
@@ -278,6 +323,7 @@ qos:
                                             {"bandwidth": "1mbps",
                                              "netem": "delay 500ms 30ms"})}))
         self.assertEqual(len(r.interfaces), 2)
+        self.assertEqual(r.interfaces["eth2"].check_password("1234"), True)
 
     def test_load_unknown_qos(self):
         """Load router from YAML with unknown QoS"""

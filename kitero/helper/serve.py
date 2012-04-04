@@ -68,7 +68,7 @@ class RouterRPCService(RPCRequestHandler):
             return (interface, qos)
 
     @expose
-    def bind_client(self, client, interface, qos):
+    def bind_client(self, client, interface, qos, password=None):
         """Bind a client to an interface and QoS settings.
 
         :param client: IP address of the client
@@ -77,11 +77,13 @@ class RouterRPCService(RPCRequestHandler):
         :type interface: string
         :param qos: QoS settings to be applied
         :type qos: string
+        :param password: supplied password
+        :type password: string, int or `None`
         """
         with self.router_lock:
             if client in self.router.clients:
                 self.router.unbind(client)
-            self.router.bind(client, interface, qos)
+            self.router.bind(client, interface, qos, password)
 
     @expose
     def unbind_client(self, client):

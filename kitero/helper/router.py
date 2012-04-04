@@ -49,7 +49,8 @@ class Router(object):
                 q[qos] = available_qos[qos]
             interfaces[i]=Interface(yaml['interfaces'][i]['name'],
                                     yaml['interfaces'][i]['description'],
-                                    q)
+                                    q,
+                                    yaml['interfaces'][i].get('password', None))
         return cls(yaml["clients"], interfaces)
 
     def __init__(self, incoming, interfaces={}):
@@ -173,7 +174,7 @@ class Router(object):
                                                                      len(self.clients),
                                                                      len(self.interfaces))
 
-    def bind(self, client, interface, qos):
+    def bind(self, client, interface, qos, password=None):
         """Bind a client to an interface and QoS settings.
 
         :param client: IP address of client
@@ -182,10 +183,19 @@ class Router(object):
         :type interface: string
         :param qos: QoS settings to use
         :type qos: string
+        :param password: supplied password
+        :type password: string, int or `None`
+
+        If the provided password is incorrect, `AssertionError` will
+        be raised.
         """
         client = str(IPAddress(client))
         if client in self._clients:
             raise ValueError("Client %r is already bound" % client)
+        # Check if the interface needs a password
+        if not self.interfaces[interface].check_password(password):
+            logger.info("Client %r provided incorrect password for %r" % (client, interface))
+            raise AssertionError("Incorrect password provided for interface %r" % interface)
         # Search the interface
         for q in self.interfaces[interface].qos:
             if q == qos:
@@ -231,7 +241,7 @@ class Interface(object):
     possible to append a new QoS settings.
     """
 
-    def __init__(self, name, description, qos={}):
+    def __init__(self, name, description, qos={}, password=None):
         """Create a new interface.
 
         :param name: name of the outgoing interface
@@ -240,10 +250,13 @@ class Interface(object):
         :type description: string
         :param qos: QoS settings associated
         :type qos: dictionary of :class:`QoS`
+        :param password: password protecting the interface
+        :type password: string or `None`
         """
         self._name = name
         self._description = description
         self._qos = qos
+        self._password = password
 
     @property
     def name(self):
@@ -254,6 +267,19 @@ class Interface(object):
     @property
     def qos(self):
         return self._qos.copy()
+
+    def check_password(self, password):
+        """Check the given password is appropriate for this interface.
+
+        :param password: provided password or `None` if no password is provided
+        :type password: string or `None`
+        :return: `True` is the password is accepted or `False` otherwise
+        """
+        if self._password is None:
+            return True
+        if password is None:
+            return False
+        return str(password) == str(self._password)
 
     def __eq__(self, other):
         if not isinstance(other, Interface):

@@ -86,6 +86,7 @@ Attribute       Comment
 	        This is not the physical name of the interface.
                 For example ``LAN``.
 ``description`` Description of the interface (targeted at the user)
+``password``    Optional password for a client to bind to this interface
 ``qos``         A list of QoS names. This is not a list of QoS
                 definitions. Since QoS can be reused on several
     		interfaces, we only specify names here.
@@ -142,6 +143,7 @@ Here is a short example for the ``router`` block::
 	  description: "WAN access"
 	  qos:
 	    - 10mbps
+          password: 1234
       qos:
 	100mbps:
 	  name: 100Mbps
