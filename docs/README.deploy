@@ -1,0 +1,39 @@
+We assume the following hierarchy in /srv/kitero:
+
+.
+|-- README
+|-- conf
+|   |-- 2011-08-17.yaml
+|   |-- 2012-01-03.yaml
+|   `-- prod.yaml -> 2011-08-17.yaml
+|-- kitero-2011-08-17.pybundle
+|-- kitero-2012-01-03.pybundle
+|-- kitero-2011-08-17.tar
+|-- kitero-2012-01-03.tar
+|-- src
+|   |-- 2011-08-17
+|   |-- 2012-01-03
+|   `-- prod -> 2011-08-17/
+|-- virtualenv
+|   |-- 2011-08-17
+|   |-- 2012-01-03
+|   `-- prod -> 2011-08-17/
+`-- web
+    `-- kitero.wsgi
+
+To deploy a new version, do the following steps on the development machine:
+
+   1. "pip bundle kitero-2012-01-03.pybundle -r requirements.txt"
+   2. "git archive HEAD > kitero-2012-01-03.tar"
+
+Then, on the target :
+
+   a. cd /srv/kitero/virtualenv
+   b. virtualenv --no-site-packages --setuptools 2012-01-03
+   c. . 2012-01-03/bin/activate
+   d. pip install ../kitero-2012-01-03.pybundle
+   e. cd ../src ; mkdir 2012-01-03
+   f. cd 2012-01-03 ; tar xvf ../../kitero-2012-01-03.tar
+   g. python setup.py install
+
+Now, you can adjust "prod" symlinks of necessary.
