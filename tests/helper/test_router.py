@@ -113,7 +113,14 @@ class TestRouterBasic(unittest.TestCase):
     def test_empty_router(self):
         """Create an empty router"""
         r = Router("eth0")
-        self.assertEqual(r.incoming, "eth0")
+        self.assertEqual(r.incoming, ["eth0"])
+        self.assertEqual(r.interfaces, {})
+        self.assertEqual(r.clients, {})
+
+    def test_multiple_incoming(self):
+        """Create an empty router with several incoming interfaces"""
+        r = Router(["eth0", "eth2"])
+        self.assertEqual(r.incoming, ["eth0", "eth2"])
         self.assertEqual(r.interfaces, {})
         self.assertEqual(r.clients, {})
 
@@ -124,7 +131,7 @@ class TestRouterBasic(unittest.TestCase):
         i1 = Interface("LAN", "My second interface", {'qos1': q1, 'qos2': q2})
         i2 = Interface("WAN", "My third interface", {'qos1': q1})
         r = Router("eth0", interfaces={'eth1': i1, 'eth2': i2})
-        self.assertEqual(r.incoming, "eth0")
+        self.assertEqual(r.incoming, ["eth0"])
         self.assertEqual(r.clients, {})
         self.assertEqual(r.interfaces, {'eth1': i1, 'eth2': i2})
 
@@ -304,7 +311,7 @@ qos:
     netem: delay 500ms 30ms
 """
         r = Router.load(yaml.load(doc))
-        self.assertEqual(r.incoming, "eth0")
+        self.assertEqual(r.incoming, ["eth0"])
         self.assertEqual(r.clients, {})
         self.assertEqual(r.interfaces["eth1"],
                          Interface("LAN", "My first interface",
@@ -324,6 +331,20 @@ qos:
                                              "netem": "delay 500ms 30ms"})}))
         self.assertEqual(len(r.interfaces), 2)
         self.assertEqual(r.interfaces["eth2"].check_password("1234"), True)
+
+    def test_several_incoming(self):
+        """Load router with several incoming interfaces"""
+        doc = """
+clients:
+  - eth0
+  - eth2
+interfaces:
+  eth1:
+    name: LAN
+    description: "My first interface"
+"""
+        r = Router.load(yaml.load(doc))
+        self.assertEqual(r.incoming, ["eth0", "eth2"])
 
     def test_load_unknown_qos(self):
         """Load router from YAML with unknown QoS"""
@@ -356,7 +377,7 @@ clients: eth0
 """
         r = Router.load(yaml.load(doc))
         self.assertEqual(r.interfaces, {})
-        self.assertEqual(r.incoming, "eth0")
+        self.assertEqual(r.incoming, ["eth0"])
         self.assertEqual(r.clients, {})
 
     def test_load_almost_minimal(self):
@@ -370,7 +391,7 @@ interfaces:
 """
         r = Router.load(yaml.load(doc))
         self.assertEqual(r.interfaces, {'eth1': Interface("LAN", "My first interface")})
-        self.assertEqual(r.incoming, "eth0")
+        self.assertEqual(r.incoming, ["eth0"])
         self.assertEqual(r.clients, {})
 
 class TestRouterObserver(unittest.TestCase):

@@ -60,18 +60,21 @@ class Router(object):
         interface `incoming` and a set of outgoing interfaces.
 
         :param incoming: name of the interface where clients are connected
-        :type incoming: string
+        :type incoming: string or list of string
         :param interfaces: dictionary of interfaces (keyed by interface name)
         :type interfaces: dictionary of :class:`Interface`
         """
+        if isinstance(incoming, basestring):
+            incoming = [ incoming ]
         self._incoming = incoming
         self._interfaces = interfaces
         self._clients = {}
         self._observers = []
         self._stats = None
         # Check that we don't have conflicting interfaces
-        if incoming in interfaces:
-            raise ValueError("Duplicate interfaces are not allowed")
+        for i in incoming:
+            if i in interfaces:
+                raise ValueError("Duplicate interfaces are not allowed")
 
     def register(self, observer):
         """Register a new observer.
@@ -147,7 +150,7 @@ class Router(object):
 
     @property
     def incoming(self):
-        """Name of the interface where clients are connected"""
+        """List of the interfaces where clients are connected"""
         return self._incoming
     @property
     def clients(self):

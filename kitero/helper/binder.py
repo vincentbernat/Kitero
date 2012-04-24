@@ -252,7 +252,7 @@ class LinuxBinder(object):
                          **subs)
 
         # Setup QoS
-        for interface in self.interfaces + [self.router.incoming,]:
+        for interface in self.interfaces + self.router.incoming:
             logger.info("setup QoS for interface %s" % interface)
             Commands.run_noerr("tc qdisc del dev %(interface)s root", interface=interface)
             Commands.run(
@@ -309,8 +309,8 @@ class LinuxBinder(object):
             return result
         bw = build(interface, qos, "bandwidth")
         netem = build(interface, qos, "netem")
-        for iface in [interface, self.router.incoming]:
-            direction = (iface == self.router.incoming) and 'down' or 'up'
+        for iface in [interface,] + self.router.incoming:
+            direction = (iface in self.router.incoming) and 'down' or 'up'
             opts=dict(iface=iface,
                       mark=mark[0],
                       ticket=ticket,
@@ -343,10 +343,21 @@ class LinuxBinder(object):
                     "  handle %(ticket)s0: sfq",
                     **opts)
         # iptables to classify and accounting
+        opts = dict(
+            A=(bind and "A" or "D"),
+            outgoing=interface,
+            client=client,
+            mark=mark[0], mask=mark[1],
+            ticket=ticket,
+            **self.config)
+        for incoming in self.router.incoming:
+            Commands.run(
+                # Mark the incoming packet from the client
+                "iptables -t mangle -%(A)s %(prerouting)s -i %(incoming)s"
+                "  -s %(client)s -j MARK --set-mark %(mark)s/%(mask)s",
+                incoming=incoming,
+                **opts)
         Commands.run(
-            # Mark the incoming packet from the client
-            "iptables -t mangle -%(A)s %(prerouting)s -i %(incoming)s"
-            "  -s %(client)s -j MARK --set-mark %(mark)s/%(mask)s",
             # Keep the mark only if we reached the output interface
             "iptables -t mangle -%(A)s %(postrouting)s "
             "  -o %(outgoing)s -s %(client)s -m mark --mark %(mark)s/%(mask)s"
@@ -355,25 +366,29 @@ class LinuxBinder(object):
             "iptables -t mangle -%(A)s %(postrouting)s"
             "  -o %(outgoing)s -m connmark --mark %(mark)s/%(mask)s"
             "  -j CLASSIFY --set-class 1:%(ticket)s0",
-            # Classify. Incoming
-            "iptables -t mangle -%(A)s %(postrouting)s"
-            "  -o %(incoming)s -m connmark --mark %(mark)s/%(mask)s"
-            "  -j CLASSIFY --set-class 1:%(ticket)s0",
+            **opts)
+        for incoming in self.router.incoming:
+            Commands.run(
+                # Classify. Incoming
+                "iptables -t mangle -%(A)s %(postrouting)s"
+                "  -o %(incoming)s -m connmark --mark %(mark)s/%(mask)s"
+                "  -j CLASSIFY --set-class 1:%(ticket)s0",
+                incoming=incoming,
+                **opts)
+        Commands.run(
             # Accounting. Outgoing
             "iptables -t mangle -%(A)s %(accounting)s"
             "  -o %(outgoing)s -m connmark --mark %(mark)s/%(mask)s"
             "  -m comment --comment up-%(outgoing)s-%(client)s",
-            # Accouting. Incoming
-            "iptables -t mangle -%(A)s %(accounting)s"
-            "  -o %(incoming)s -m connmark --mark %(mark)s/%(mask)s"
-            "  -m comment --comment down-%(outgoing)s-%(client)s",
-            A=(bind and "A" or "D"),
-            incoming=self.router.incoming,
-            outgoing=interface,
-            client=client,
-            mark=mark[0], mask=mark[1],
-            ticket=ticket,
-            **self.config)
+            **opts)
+        for incoming in self.router.incoming:
+            Commands.run(
+                # Accouting. Incoming
+                "iptables -t mangle -%(A)s %(accounting)s"
+                "  -o %(incoming)s -m connmark --mark %(mark)s/%(mask)s"
+                "  -m comment --comment down-%(outgoing)s-%(client)s",
+                incoming=incoming,
+                **opts)
 
     def notify(self, event, router, **kwargs):
         """Handle an event.
