@@ -24,28 +24,28 @@ class TestBadOptions(unittest.TestCase):
         """Run the service without arguments"""
         with self.assertRaises(SystemExit) as se:
             Service.run([])
-        self.assertNotEqual(se.exception, 0)
+        self.assertNotEqual(se.exception.code, 0)
 
     def test_with_unknown_args(self):
         """Run the service with incorrect args"""
         with self.assertRaises(SystemExit) as se:
             Service.run(["-y", "squid"])
-        self.assertNotEqual(se.exception, 0)
+        self.assertNotEqual(se.exception.code, 0)
 
     def test_with_incorrect_args(self):
         """Run the service with options not set correctly"""
         with self.assertRaises(SystemExit) as se:
             Service.run(["-l"])
-        self.assertNotEqual(se.exception, 0)
+        self.assertNotEqual(se.exception.code, 0)
         with self.assertRaises(SystemExit) as se:
             Service.run(["opt1", "opt2"])
-        self.assertNotEqual(se.exception, 0)
+        self.assertNotEqual(se.exception.code, 0)
 
     def test_with_inexistant_configuration(self):
         """Run the service with a missing configuration file"""
         with self.assertRaises(SystemExit) as se:
             Service.run(["/non/existant/config/file.yaml"])
-        self.assertNotEqual(se.exception, 0)
+        self.assertNotEqual(se.exception.code, 0)
 
 class FakeService(Service):
     """Fake service to test start of service through run()"""
@@ -82,20 +82,20 @@ router:
         """Run with just an empty config file"""
         with self.assertRaises(SystemExit) as se:
             FakeService.run([self.conf])
-        self.assertEqual(se.exception, 0)
+        self.assertEqual(se.exception.code, 0)
 
     def test_logging_to_syslog(self):
         """Ask to log to syslog"""
         with self.assertRaises(SystemExit) as se:
             FakeService.run(["-s", self.conf])
-        self.assertEqual(se.exception, 0)
+        self.assertEqual(se.exception.code, 0)
         # We can't really check
 
     def test_logging_to_file(self):
         """Log to a file"""
         with self.assertRaises(SystemExit) as se:
             FakeService.run(["-l", self.log, self.conf])
-        self.assertEqual(se.exception, 0)
+        self.assertEqual(se.exception.code, 0)
         gotwarn = False
         for line in file(self.log):
             mo = self.re.match(line)
@@ -109,7 +109,7 @@ router:
         """Enable debugging"""
         with self.assertRaises(SystemExit) as se:
             FakeService.run(["-d", "-l", self.log, self.conf])
-        self.assertEqual(se.exception, 0)
+        self.assertEqual(se.exception.code, 0)
         logs = file(self.log).read().split("\n")
         gotinfo = False
         for line in file(self.log):
@@ -124,7 +124,7 @@ router:
         """Enable more debugging"""
         with self.assertRaises(SystemExit) as se:
             FakeService.run(["-dd", "-l", self.log, self.conf])
-        self.assertEqual(se.exception, 0)
+        self.assertEqual(se.exception.code, 0)
         gotdebug = False
         for line in file(self.log):
             mo = self.re.match(line)
@@ -142,7 +142,7 @@ router:
                 pass
         with self.assertRaises(SystemExit) as se:
             FakeService.run(["-dd", "-l", self.log, self.conf], binder=Binder())
-        self.assertEqual(se.exception, 0)
+        self.assertEqual(se.exception.code, 0)
 
 class TestRPCService(unittest.TestCase):
     def setUp(self):
