@@ -315,11 +315,22 @@ qos:
                          {'eth1': {'clients': 1, 'details': {'192.168.1.3': {}}},
                           'eth2': {'clients': 2, 'details': {'192.168.1.1': {},
                                                              '192.168.1.2': {}}}})
+        # IPv6
+        bind('2001:db8::1', 'eth1', 'qos1')
+        check('2001:db8::1', ['eth1', 'qos1'])
+        self.assertEqual(stats(),
+                         {'eth1': {'clients': 2, 'details': {'192.168.1.3': {},
+                                                             '2001:db8::1': {}}},
+                          'eth2': {'clients': 2, 'details': {'192.168.1.1': {},
+                                                             '192.168.1.2': {}}}})
+
+
         check('192.168.1.4', None)
         unbind('192.168.1.4')
         check('192.168.1.4', None)
         unbind('192.168.1.1')
         check('192.168.1.1', None)
+
         sock.close()
 
     def test_stats(self):
@@ -380,6 +391,19 @@ qos:
         # Clients should have been restored
         self.assertEqual(self.router.clients["192.168.1.15"], ("eth1", "qos1"))
         self.assertEqual(self.router.clients["192.168.1.16"], ("eth1", "qos2"))
+
+    def test_persistency_ipv6(self):
+        """Test the use of persistency with an IPv6 address"""
+        self.assertEqual(self.router.clients, {})
+        self.router.bind("2001:db8::1", "eth1", "qos1")
+        self.router.bind("2001:db8::2", "eth1", "qos2")
+        self.assertEqual(self.router.clients["2001:db8::1"], ("eth1", "qos1"))
+        self.assertEqual(self.router.clients["2001:db8::2"], ("eth1", "qos2"))
+        self.service.stop()
+        self.realSetup()
+        # Clients should have been restored
+        self.assertEqual(self.router.clients["2001:db8::1"], ("eth1", "qos1"))
+        self.assertEqual(self.router.clients["2001:db8::2"], ("eth1", "qos2"))
 
     def test_partial_persistency(self):
         """Test the use of persistency when configuration has changed"""

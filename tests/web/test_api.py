@@ -53,6 +53,8 @@ qos:
         RPCClient.clean()
         self.service.stop()
 
+class TestApiIPv4(TestApi):
+
     def test_current(self):
         """Grab current settings."""
         rv = self.app.get("/api/1.0/current",
@@ -296,4 +298,91 @@ qos:
         self.assertEqual(result['value'],
                          {'eth1': {'clients': 1,
                                    'details': {'192.168.1.16': {}}},
+                          'eth2': {'clients': 0, 'details': {}}})
+
+
+class TestApiIPv6(TestApi):
+
+    def test_current_ipv6(self):
+        """Grab current settings with an IPv6 address"""
+        rv = self.app.get("/api/1.0/current",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.mimetype, 'application/json')
+        result = json.loads(rv.data)
+        self.assertEqual(result['status'], 0)
+        self.assertIn('time', result)
+        self.assertEqual(result['value'], dict(ip='2001:db8::1'))
+
+    def test_bind_ipv6(self):
+        """Try to bind some clients with an IPv6 address"""
+        rv = self.app.put("/api/1.0/bind/eth1/qos2",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.mimetype, 'application/json')
+        result = json.loads(rv.data)
+        self.assertEqual(result['status'], 0)
+        self.assertEqual(result['value'], { 'ip': '2001:db8::1',
+                                            'interface': 'eth1',
+                                            'qos': 'qos2' })
+        # Check
+        rv = self.app.get("/api/1.0/current",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.mimetype, 'application/json')
+        result = json.loads(rv.data)
+        self.assertEqual(result['status'], 0)
+        self.assertEqual(result['value'], dict(ip='2001:db8::1',
+                                               interface='eth1',
+                                               qos='qos2'))
+        # Rebind
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        rv = self.app.get("/api/1.0/current",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='2001:db8::1',
+                                               interface='eth1',
+                                               qos='qos1'))
+
+    def test_post_put_get_ipv6(self):
+        """Bind with POST and GET, get current with PUT and IPv6 address"""
+        rv = self.app.get("/api/1.0/bind/eth1/qos1",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        rv = self.app.post("/api/1.0/bind/eth1/qos1",
+                           environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        rv = self.app.put("/api/1.0/current",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 405)
+
+    def test_unbind_ipv6(self):
+        """Try to unbind a client with IPv6 address"""
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='2001:db8::1',
+                                               interface='eth1',
+                                               qos='qos1'))
+        rv = self.app.put("/api/1.0/unbind",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'], dict(ip='2001:db8::1'))
+
+    def test_stats_ipv6(self):
+        """Test statistics with an IPv6 address"""
+        rv = self.app.put("/api/1.0/bind/eth1/qos1",
+                          environ_overrides={"REMOTE_ADDR": "2001:db8::1"})
+        self.assertEqual(rv.status_code, 200)
+        rv = self.app.get("/api/1.0/stats")
+        self.assertEqual(rv.status_code, 200)
+        result = json.loads(rv.data)
+        self.assertEqual(result['value'],
+                         {'eth1': {'clients': 1,
+                                   'details': {'2001:db8::1': {}}},
                           'eth2': {'clients': 0, 'details': {}}})

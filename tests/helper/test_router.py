@@ -156,6 +156,16 @@ class TestRouterBasic(unittest.TestCase):
         self.assertEqual(r.clients["192.168.15.3"], ('eth2', 'qos1'))
         self.assertEqual(r.clients["192.168.15.4"], ('eth1', 'qos2'))
 
+    def test_bind_client_ipv6(self):
+        """IPv6 client binding"""
+        q1 = QoS("100M", "My first QoS")
+        i1 = Interface("LAN", "My second interface", {'qos1': q1})
+        r = Router("eth0", interfaces={'eth1': i1 })
+        r.bind("2001:db8::1", "eth1", "qos1")
+        r.bind("2001:db8::2", "eth1", "qos1")
+        self.assertEqual(r.clients["2001:db8::1"], ('eth1', 'qos1'))
+        self.assertEqual(r.clients["2001:db8::2"], ('eth1', 'qos1'))
+
     def test_bind_inexistant(self):
         """Client binding to inexistant interface or QoS"""
         q1 = QoS("100M", "My first QoS")
