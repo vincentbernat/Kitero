@@ -202,9 +202,14 @@ class LinuxBinder(object):
     the other direction, ``PREROUTING``, it is not present yet. We
     assume that there is no NAT on the interface where clients are
     connected.
+
+    This binder handles IPv6.
     """
 
     zope.interface.implements(IBinder, IStatsProvider)
+
+    iptables = [ "iptables", "ip6tables" ]
+    ipcmd = [ "ip", "ip -6" ]
 
     def __init__(self, max_users=256):
         """Not really the constructor of the class.
@@ -220,6 +225,9 @@ class LinuxBinder(object):
             "max_users": max_users,              # maximum number of users **per interface**
             }
 
+    def isipv6(self, client):
+        """Is the client an IPv6 address?"""
+        return ":" in client
 
     def setup(self):
         """Setup the binder for the first time.
@@ -242,14 +250,17 @@ class LinuxBinder(object):
                 subs['chain_upper'] = "POSTROUTING"
             logger.info("setup %(chain)s chain" % subs)
             # Cleanup old iptables rules
-            Commands.run_noerr("iptables -t mangle -D %(chain_upper)s -j  %(chain)s",
-                               "iptables -t mangle -F %(chain)s",
-                               "iptables -t mangle -X %(chain)s",
-                               **subs)
-            # Setup the new chains
-            Commands.run("iptables -t mangle -N %(chain)s",
-                         "iptables -t mangle -I %(chain_upper)s -j  %(chain)s",
-                         **subs)
+            for iptables in self.iptables:
+                Commands.run_noerr("%(iptables)s -t mangle -D %(chain_upper)s -j  %(chain)s",
+                                   "%(iptables)s -t mangle -F %(chain)s",
+                                   "%(iptables)s -t mangle -X %(chain)s",
+                                   iptables=iptables,
+                                   **subs)
+                # Setup the new chains
+                Commands.run("%(iptables)s -t mangle -N %(chain)s",
+                             "%(iptables)s -t mangle -I %(chain_upper)s -j  %(chain)s",
+                             iptables=iptables,
+                             **subs)
 
         # Setup QoS
         for interface in self.interfaces + self.router.incoming:
@@ -264,19 +275,26 @@ class LinuxBinder(object):
                 # Use default class for unmatched traffic
                 "tc filter add dev %(interface)s protocol arp parent 1:0"
                 "  prio 1 u32 match u32 0 0 flowid 1:2", # ARP
-                "iptables -t mangle -A %(postrouting)s"
-                "  -o %(interface)s -j CLASSIFY --set-class 1:2", # IP
                 interface=interface, **self.config)
+            for iptables in self.iptables:
+                Commands.run(
+                    "%(iptables)s -t mangle -A %(postrouting)s"
+                    "  -o %(interface)s -j CLASSIFY --set-class 1:2", # IP
+                    iptables=iptables,
+                    interface=interface, **self.config)
 
         # Setup routing rules
         for interface in self.interfaces:
             logger.info("setup ip rules for interface %s" % interface)
-            Commands.run_noerr("ip rule del fwmark %(mark)s table %(interface)s",
-                               mark="%s/%s" % self.mark(self.interfaces.index(interface)),
-                               interface=interface)
-            Commands.run("ip rule add fwmark %(mark)s table %(interface)s",
-                         mark="%s/%s" % self.mark(self.interfaces.index(interface)),
-                         interface=interface)
+            for ip in self.ipcmd:
+                Commands.run_noerr("%(ip)s rule del fwmark %(mark)s table %(interface)s",
+                                   mark="%s/%s" % self.mark(self.interfaces.index(interface)),
+                                   ip = ip,
+                                   interface=interface)
+                Commands.run("%(ip)s rule add fwmark %(mark)s table %(interface)s",
+                             ip = ip,
+                             mark="%s/%s" % self.mark(self.interfaces.index(interface)),
+                             interface=interface)
 
     def bind(self, client, interface, qos, bind=True):
         """Bind or unbind a user.
@@ -349,42 +367,43 @@ class LinuxBinder(object):
             client=client,
             mark=mark[0], mask=mark[1],
             ticket=ticket,
+            iptables=self.isipv6(client) and "ip6tables" or "iptables",
             **self.config)
         for incoming in self.router.incoming:
             Commands.run(
                 # Mark the incoming packet from the client
-                "iptables -t mangle -%(A)s %(prerouting)s -i %(incoming)s"
+                "%(iptables)s -t mangle -%(A)s %(prerouting)s -i %(incoming)s"
                 "  -s %(client)s -j MARK --set-mark %(mark)s/%(mask)s",
                 incoming=incoming,
                 **opts)
         Commands.run(
             # Keep the mark only if we reached the output interface
-            "iptables -t mangle -%(A)s %(postrouting)s "
+            "%(iptables)s -t mangle -%(A)s %(postrouting)s "
             "  -o %(outgoing)s -s %(client)s -m mark --mark %(mark)s/%(mask)s"
             "  -j CONNMARK --save-mark --nfmask %(mask)s --ctmask %(mask)s",
             # Classify. Outgoing
-            "iptables -t mangle -%(A)s %(postrouting)s"
+            "%(iptables)s -t mangle -%(A)s %(postrouting)s"
             "  -o %(outgoing)s -m connmark --mark %(mark)s/%(mask)s"
             "  -j CLASSIFY --set-class 1:%(ticket)s0",
             **opts)
         for incoming in self.router.incoming:
             Commands.run(
                 # Classify. Incoming
-                "iptables -t mangle -%(A)s %(postrouting)s"
+                "%(iptables)s -t mangle -%(A)s %(postrouting)s"
                 "  -o %(incoming)s -m connmark --mark %(mark)s/%(mask)s"
                 "  -j CLASSIFY --set-class 1:%(ticket)s0",
                 incoming=incoming,
                 **opts)
         Commands.run(
             # Accounting. Outgoing
-            "iptables -t mangle -%(A)s %(accounting)s"
+            "%(iptables)s -t mangle -%(A)s %(accounting)s"
             "  -o %(outgoing)s -m connmark --mark %(mark)s/%(mask)s"
             "  -m comment --comment up-%(outgoing)s-%(client)s",
             **opts)
         for incoming in self.router.incoming:
             Commands.run(
                 # Accouting. Incoming
-                "iptables -t mangle -%(A)s %(accounting)s"
+                "%(iptables)s -t mangle -%(A)s %(accounting)s"
                 "  -o %(incoming)s -m connmark --mark %(mark)s/%(mask)s"
                 "  -m comment --comment down-%(outgoing)s-%(client)s",
                 incoming=incoming,
@@ -435,8 +454,9 @@ class LinuxBinder(object):
         if self.router is None:
             return {}           # Setup is not done yet
         stats = {}
-        output = Commands.run("iptables -t mangle -v -S %(accounting)s",
-                              **self.config)
+        output = "\n".join([Commands.run("%(iptables)s -t mangle -v -S %(accounting)s",
+                                         iptables=iptables,
+                                         **self.config) for iptables in self.iptables])
         for line in output.split("\n"):
             mo = self.STATSRE.match(line.strip())
             if mo:
@@ -510,3 +530,14 @@ class PersistentBinder(object):
             del self.bindings[kwargs['client']]
         logger.info("save bindings to %s" % self.save)
         pickle.dump(self.bindings, file(self.save, "w"))
+
+class LinuxBinderIPv4(LinuxBinder):
+    """IPv4 only version of `LinuxBinder`."""
+
+    iptables = [ "iptables" ]
+    ipcmd = [ "ip" ]
+
+    def isipv6(self, client):
+        if LinuxBinder.isipv6(self, client):
+            raise NotImplementedError("cannot use IPv6 address with this binder")
+        return False

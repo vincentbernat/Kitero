@@ -10,14 +10,23 @@ import tempfile
 import shutil
 from functools import wraps
 
-from kitero.helper.binder import LinuxBinder
+from kitero.helper.binder import LinuxBinder, LinuxBinderIPv4
 from kitero.helper.router import Router
 
 # SaveBinder is tested in test_service.py
 
-class TestBinder(unittest.TestCase):
+# Redirect future output to some file named after the function
+def out(f):
+    @wraps(f)
+    def decorated_function(self, *args, **kwargs):
+        self.cur = os.path.join(self.temp, "output.txt")
+        os.symlink(f.__name__, self.cur)
+        return f(self, *args, **kwargs)
+    return decorated_function
+
+class TestBinderAny(unittest.TestCase):
     def setUp(self):
-        self.binder = LinuxBinder()
+        self.binder = self.BINDER()
         doc = """
 clients: eth0
 interfaces:
@@ -81,6 +90,15 @@ case "$(basename $0) $@" in
 -A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x20000000/0xffe00000 -m comment --comment "down-eth1-172.29.7.19" -c 8888 11111
 EOF
   ;;
+   "ip6tables -t mangle -v -S kitero-ACCOUNTING")
+  cat <<EOF
+-N kitero-ACCOUNTING
+-A kitero-ACCOUNTING -o eth2 -m connmark --mark 0x40000000/0xffe00000 -m comment --comment "up-eth2-2001:db8::1" -c 3219 209628
+-A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x40000000/0xffe00000 -m comment --comment "down-eth2-2001:db8::1" -c 7287 18647983
+-A kitero-ACCOUNTING -o eth1 -m connmark --mark 0x20000000/0xffe00000 -m comment --comment "up-eth1-2001:db8::2" -c 8885 97999
+-A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x20000000/0xffe00000 -m comment --comment "down-eth1-2001:db8::2" -c 8885 12111
+EOF
+  ;;
 esac
 exit 0
 """ % os.path.join(self.temp, "output.txt"))
@@ -88,55 +106,75 @@ exit 0
         os.chmod(os.path.join(biny, "fake"),
                  stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH |
                  stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-        for ex in ['iptables', 'tc', 'ip']:
+        for ex in ['iptables', 'ip6tables', 'tc', 'ip']:
             os.symlink("fake", os.path.join(biny, ex))
 
-    # Redirect future output to some file named after the function
-    def out(f):
-        @wraps(f)
-        def decorated_function(self, *args, **kwargs):
-            self.cur = os.path.join(self.temp, "output.txt")
-            os.symlink(f.__name__, self.cur)
-            return f(self, *args, **kwargs)
-        return decorated_function
+    def tearDown(self):
+        os.environ['PATH'] = self.oldpath
+        shutil.rmtree(self.temp)
 
+class TestBinderIPv4IPv6(TestBinderAny):
+
+    BINDER = LinuxBinder
     SETUP = """iptables -t mangle -D PREROUTING -j kitero-PREROUTING
 iptables -t mangle -F kitero-PREROUTING
 iptables -t mangle -X kitero-PREROUTING
 iptables -t mangle -N kitero-PREROUTING
 iptables -t mangle -I PREROUTING -j kitero-PREROUTING
+ip6tables -t mangle -D PREROUTING -j kitero-PREROUTING
+ip6tables -t mangle -F kitero-PREROUTING
+ip6tables -t mangle -X kitero-PREROUTING
+ip6tables -t mangle -N kitero-PREROUTING
+ip6tables -t mangle -I PREROUTING -j kitero-PREROUTING
 iptables -t mangle -D POSTROUTING -j kitero-ACCOUNTING
 iptables -t mangle -F kitero-ACCOUNTING
 iptables -t mangle -X kitero-ACCOUNTING
 iptables -t mangle -N kitero-ACCOUNTING
 iptables -t mangle -I POSTROUTING -j kitero-ACCOUNTING
+ip6tables -t mangle -D POSTROUTING -j kitero-ACCOUNTING
+ip6tables -t mangle -F kitero-ACCOUNTING
+ip6tables -t mangle -X kitero-ACCOUNTING
+ip6tables -t mangle -N kitero-ACCOUNTING
+ip6tables -t mangle -I POSTROUTING -j kitero-ACCOUNTING
 iptables -t mangle -D POSTROUTING -j kitero-POSTROUTING
 iptables -t mangle -F kitero-POSTROUTING
 iptables -t mangle -X kitero-POSTROUTING
 iptables -t mangle -N kitero-POSTROUTING
 iptables -t mangle -I POSTROUTING -j kitero-POSTROUTING
+ip6tables -t mangle -D POSTROUTING -j kitero-POSTROUTING
+ip6tables -t mangle -F kitero-POSTROUTING
+ip6tables -t mangle -X kitero-POSTROUTING
+ip6tables -t mangle -N kitero-POSTROUTING
+ip6tables -t mangle -I POSTROUTING -j kitero-POSTROUTING
 tc qdisc del dev eth1 root
 tc qdisc add dev eth1 root handle 1: drr
 tc class add dev eth1 parent 1: classid 1:2 drr
 tc qdisc add dev eth1 parent 1:2 handle 12: sfq
 tc filter add dev eth1 protocol arp parent 1:0 prio 1 u32 match u32 0 0 flowid 1:2
 iptables -t mangle -A kitero-POSTROUTING -o eth1 -j CLASSIFY --set-class 1:2
+ip6tables -t mangle -A kitero-POSTROUTING -o eth1 -j CLASSIFY --set-class 1:2
 tc qdisc del dev eth2 root
 tc qdisc add dev eth2 root handle 1: drr
 tc class add dev eth2 parent 1: classid 1:2 drr
 tc qdisc add dev eth2 parent 1:2 handle 12: sfq
 tc filter add dev eth2 protocol arp parent 1:0 prio 1 u32 match u32 0 0 flowid 1:2
 iptables -t mangle -A kitero-POSTROUTING -o eth2 -j CLASSIFY --set-class 1:2
+ip6tables -t mangle -A kitero-POSTROUTING -o eth2 -j CLASSIFY --set-class 1:2
 tc qdisc del dev eth0 root
 tc qdisc add dev eth0 root handle 1: drr
 tc class add dev eth0 parent 1: classid 1:2 drr
 tc qdisc add dev eth0 parent 1:2 handle 12: sfq
 tc filter add dev eth0 protocol arp parent 1:0 prio 1 u32 match u32 0 0 flowid 1:2
 iptables -t mangle -A kitero-POSTROUTING -o eth0 -j CLASSIFY --set-class 1:2
+ip6tables -t mangle -A kitero-POSTROUTING -o eth0 -j CLASSIFY --set-class 1:2
 ip rule del fwmark 0x40000000/0xc0000000 table eth1
 ip rule add fwmark 0x40000000/0xc0000000 table eth1
+ip -6 rule del fwmark 0x40000000/0xc0000000 table eth1
+ip -6 rule add fwmark 0x40000000/0xc0000000 table eth1
 ip rule del fwmark 0x80000000/0xc0000000 table eth2
 ip rule add fwmark 0x80000000/0xc0000000 table eth2
+ip -6 rule del fwmark 0x80000000/0xc0000000 table eth2
+ip -6 rule add fwmark 0x80000000/0xc0000000 table eth2
 """
 
     @out
@@ -163,6 +201,25 @@ iptables -t mangle -A kitero-POSTROUTING -o eth1 -m connmark --mark 0x40000000/0
 iptables -t mangle -A kitero-POSTROUTING -o eth0 -m connmark --mark 0x40000000/0xffc00000 -j CLASSIFY --set-class 1:10
 iptables -t mangle -A kitero-ACCOUNTING -o eth1 -m connmark --mark 0x40000000/0xffc00000 -m comment --comment up-eth1-192.168.15.2
 iptables -t mangle -A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x40000000/0xffc00000 -m comment --comment down-eth1-192.168.15.2
+""").split("\n"))
+
+    @out
+    def test_setup_and_binding_ipv6(self):
+        """Ask binder to bind an IPv6 client for the first time"""
+        self.router.bind("2001:db8::1", "eth1", "qos1")
+        self.assertEqual(file(self.cur).read().split("\n"), (self.SETUP + 
+"""tc class add dev eth1 parent 1: classid 1:10 drr
+tc qdisc add dev eth1 parent 1:10 handle 10: tbf rate 50mbps buffer 10Mbit latency 1s
+tc qdisc add dev eth1 parent 10:1 handle 11: netem delay 100ms 10ms distribution experimental
+tc class add dev eth0 parent 1: classid 1:10 drr
+tc qdisc add dev eth0 parent 1:10 handle 10: tbf rate 100mbps buffer 10Mbit latency 1s
+tc qdisc add dev eth0 parent 10:1 handle 11: netem delay 100ms 10ms distribution experimental
+ip6tables -t mangle -A kitero-PREROUTING -i eth0 -s 2001:db8::1 -j MARK --set-mark 0x40000000/0xffc00000
+ip6tables -t mangle -A kitero-POSTROUTING -o eth1 -s 2001:db8::1 -m mark --mark 0x40000000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
+ip6tables -t mangle -A kitero-POSTROUTING -o eth1 -m connmark --mark 0x40000000/0xffc00000 -j CLASSIFY --set-class 1:10
+ip6tables -t mangle -A kitero-POSTROUTING -o eth0 -m connmark --mark 0x40000000/0xffc00000 -j CLASSIFY --set-class 1:10
+ip6tables -t mangle -A kitero-ACCOUNTING -o eth1 -m connmark --mark 0x40000000/0xffc00000 -m comment --comment up-eth1-2001:db8::1
+ip6tables -t mangle -A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x40000000/0xffc00000 -m comment --comment down-eth1-2001:db8::1
 """).split("\n"))
 
     @out
@@ -202,6 +259,24 @@ iptables -t mangle -D kitero-POSTROUTING -o eth2 -m connmark --mark 0x80000000/0
 iptables -t mangle -D kitero-POSTROUTING -o eth0 -m connmark --mark 0x80000000/0xffc00000 -j CLASSIFY --set-class 1:10
 iptables -t mangle -D kitero-ACCOUNTING -o eth2 -m connmark --mark 0x80000000/0xffc00000 -m comment --comment up-eth2-192.168.15.2
 iptables -t mangle -D kitero-ACCOUNTING -o eth0 -m connmark --mark 0x80000000/0xffc00000 -m comment --comment down-eth2-192.168.15.2
+""".split("\n"))
+
+    @out
+    def test_unbind_ipv6(self):
+        """Bind an IPv6 client, then unbind it"""
+        self.router.bind("2001:db8::1", "eth2", "qos3")
+        self.router.bind("2001:db8::2", "eth1", "qos1")
+        os.unlink(self.cur)
+        self.router.unbind("2001:db8::1")
+        self.assertEqual(file(self.cur).read().split("\n"),
+"""tc class del dev eth2 parent 1: classid 1:10 drr
+tc class del dev eth0 parent 1: classid 1:10 drr
+ip6tables -t mangle -D kitero-PREROUTING -i eth0 -s 2001:db8::1 -j MARK --set-mark 0x80000000/0xffc00000
+ip6tables -t mangle -D kitero-POSTROUTING -o eth2 -s 2001:db8::1 -m mark --mark 0x80000000/0xffc00000 -j CONNMARK --save-mark --nfmask 0xffc00000 --ctmask 0xffc00000
+ip6tables -t mangle -D kitero-POSTROUTING -o eth2 -m connmark --mark 0x80000000/0xffc00000 -j CLASSIFY --set-class 1:10
+ip6tables -t mangle -D kitero-POSTROUTING -o eth0 -m connmark --mark 0x80000000/0xffc00000 -j CLASSIFY --set-class 1:10
+ip6tables -t mangle -D kitero-ACCOUNTING -o eth2 -m connmark --mark 0x80000000/0xffc00000 -m comment --comment up-eth2-2001:db8::1
+ip6tables -t mangle -D kitero-ACCOUNTING -o eth0 -m connmark --mark 0x80000000/0xffc00000 -m comment --comment down-eth2-2001:db8::1
 """.split("\n"))
 
     @out
@@ -272,26 +347,46 @@ iptables -t mangle -A kitero-ACCOUNTING -o eth0 -m connmark --mark 0x80400000/0x
         """Grab some statistics"""
         self.router.bind("192.168.15.11", "eth2", "qos1") # For initialization
         self.assertEqual(self.binder.stats(),
-                         dict(eth1=dict(clients=1,
-                                        up=99999,
-                                        down=11111,
+                         dict(eth1=dict(clients=2,
+                                        up=(99999+97999),
+                                        down=(11111+12111),
                                         details={"172.29.7.19":
-                                                     dict(up=99999, down=11111)}),
-                              eth2=dict(clients=2,
-                                        up=(2079628+20796),
-                                        down=(108647983+2015775),
+                                                     dict(up=99999, down=11111),
+                                                 "2001:db8::2":
+                                                     dict(up=97999, down=12111)}),
+                              eth2=dict(clients=3,
+                                        up=(2079628+20796+209628),
+                                        down=(108647983+2015775+18647983),
                                         details={"172.29.7.14":
                                                      dict(up=2079628, down=108647983),
                                                  "172.29.7.15":
-                                                     dict(up=20796, down=2015775)})))
+                                                     dict(up=20796, down=2015775),
+                                                 "2001:db8::1":
+                                                     dict(up=209628, down=18647983)})))
+
 
     def test_no_stats(self):
         """Grab stats when not initialized"""
         self.assertEqual(self.binder.stats(), {})
 
-    def tearDown(self):
-        os.environ['PATH'] = self.oldpath
-        shutil.rmtree(self.temp)
+class TestBinderIPv4(TestBinderAny):
+
+    BINDER = LinuxBinderIPv4
+
+    @out
+    def test_setup(self):
+        """Ask binder to setup the environment in IPv4 only environment"""
+        self.binder.router = self.router
+        self.binder.setup()
+        self.assertNotIn("ip6tables", file(self.cur).read())
+        self.assertIn("iptables", file(self.cur).read())
+
+    @out
+    def test_bind_ipv6(self):
+        """Try to bind IPv6 in IPv4 only environment"""
+        self.router.bind("192.168.15.11", "eth2", "qos1")
+        with self.assertRaises(NotImplementedError):
+            self.router.bind("2001:db8::1", "eth2", "qos1")
 
 from kitero.helper.binder import Mark
 
@@ -315,6 +410,7 @@ class TestMark(unittest.TestCase):
         self.assertEqual(m(1,None), ("0x20000000", "0xf0000000"))
         self.assertEqual(m(None,1), ("0x02000000", "0x0e000000"))
         self.assertEqual(m(7,3), ("0x86000000", "0xfe000000"))
+
 
 from kitero.helper.binder import SlotsProvider
 
@@ -354,6 +450,21 @@ class TestSlots(unittest.TestCase):
         s.release("192.168.1.5")
         self.assertEqual(s.request("eth2", "192.168.1.1"), 1)
         self.assertEqual(s.request("eth1", "192.168.1.5"), 0)
+        self.assertEqual(s.request("eth1", "192.168.1.3"), 2)
+
+    def test_requests_releases_ipv6(self):
+        """Request and release slots, with IPv6"""
+        s = SlotsProvider(10)
+        s.request("eth1", "192.168.1.1")
+        s.request("eth1", "2001:db8::2")
+        s.request("eth1", "192.168.1.3")
+        s.request("eth2", "2001:db8::4")
+        s.request("eth2", "2001:db8::5")
+        s.release("192.168.1.1")
+        s.release("192.168.1.3")
+        s.release("2001:db8::5")
+        self.assertEqual(s.request("eth2", "192.168.1.1"), 1)
+        self.assertEqual(s.request("eth1", "2001:db8::5"), 0)
         self.assertEqual(s.request("eth1", "192.168.1.3"), 2)
 
     def test_no_free_slots(self):
@@ -402,6 +513,14 @@ class TestTickets(unittest.TestCase):
         self.assertEqual(t.request("192.168.1.12"), 8)
         self.assertEqual(t.request("192.168.1.13"), 9)
         self.assertEqual(t.get("192.168.1.11"), 6)
+
+    def test_tickets(self):
+        """Request and release tickets with IPv6"""
+        t = TicketsProvider()
+        self.assertEqual(t.request("192.168.1.1"), 1)
+        self.assertEqual(t.request("2001:db8::1"), 2)
+        self.assertEqual(t.request("192.168.1.2"), 3)
+        self.assertEqual(t.request("2001:db8::2"), 4)
 
     def test_errors(self):
         """Requests and release bogus tickets"""
