@@ -12,3 +12,9 @@ will be presented a simple interface allowing to choose the interface
 that should be used to route her packets and the associated QoS.
 
 The documentation can be built with `python setup.py build_sphinx`.
+
+Facebook published a similar tool: [Augmented Traffic Control][]. You
+may want to look at it. However, only one output interface can be used
+(it only handles QoS).
+
+[Augmented Traffic Control]: https://github.com/facebook/augmented-traffic-control
